@@ -1,0 +1,29 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+{{ block.super }}
+    {% comment %} <li>
+        <a href="../view/" class="button btn btn-warning">View Details</a>
+    </li> {% endcomment %}
+    <div class="form-group" style="margin-top: 10px;">
+    <a href="../view/"
+       class="btn btn-info form-control">
+       <i class="fas fa-eye"></i> View Details
+    </a>
+  </div>
+
+  <div class="form-group" style="margin-top: 10px;">
+    <a href="{% url 'admin:projects_projecthouses_add' %}?project_id={{ original.id }}"
+       class="btn btn-info form-control">
+       <i class="fas fa-plus"></i> Add House
+    </a>
+  </div>
+
+  <div class="form-group" style="margin-top: 10px;">
+    <a href="/admin/projects/projectworkerattendances/?project_id={{ original.id }}"
+       class="btn btn-info form-control">
+       <i class="fas fa-book text-black"></i> Worker Attendance
+    </a>
+  </div>
+    
+{% endblock %}

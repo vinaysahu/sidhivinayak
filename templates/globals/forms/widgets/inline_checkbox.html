@@ -1,0 +1,20 @@
+{# templates/globals/forms/widgets/inline_checkbox.html #}
+
+  {% for group, options, index in widget.optgroups %}
+    {% for option in options %}
+      <span style="padding-right: 10px;">
+  <label class="form-check-label btn btn-outline-primary" for="{{ option.attrs.id }}_{{ forloop.counter }}">
+    <input class="form-check-input btn-check" 
+    type="checkbox"
+          name="{{ widget.name }}"
+          value="{{ option.value }}"
+          id="{{ option.attrs.id }}_{{ forloop.counter }}"
+          {% if option.selected %}checked{% endif %}
+          {% include "django/forms/widgets/attrs.html" %}
+    >
+        {{ option.label }}
+  </label>
+</span>
+    {% endfor %}
+  {% endfor %}
+

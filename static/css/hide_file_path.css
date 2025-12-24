@@ -1,0 +1,9 @@
+.file-upload a {
+    white-space: normal;       /* text multiline ho jayega */
+    word-wrap: break-word;     /* long words break ho jayenge */
+    overflow-wrap: break-word; /* modern support */
+    display: inline-block;     /* inline element wrap properly */
+    max-width: 200px;
+}
+
+

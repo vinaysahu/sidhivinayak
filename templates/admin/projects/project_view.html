@@ -1,0 +1,218 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &nbsp; › &nbsp; <a href="{% url 'admin:app_list' app_label='projects' %}">Project Management</a>
+  &nbsp; › &nbsp; <a href="{% url 'admin:projects_projects_changelist' %}">Projects</a>
+  {% if project %}
+  {% comment %} &nbsp; › &nbsp; <a href="{% url 'admin:projects_projects_change' project.id %}">{{project.name}}</a> {% endcomment %}
+  &nbsp; › &nbsp; {{project.name}}
+  {% else %}
+  &nbsp; › View
+  {% endif %}
+</div>
+{% endblock %}
+{% block content %}
+{{ block.super }}
+    <div class="container">
+        <div class="accordion" id="accordionExample">
+
+            <div class="card">
+                <div class="card-header" id="headingOne">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Project Details
+                        </button>
+                    </h2>
+                </div>
+
+                    <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+                        <div class="card-body">
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col-12 col-sm-12">
+                                        <p><strong>ID:</strong> {{ project.id }}</p>
+                                        <p><strong>Type:</strong> {{ project.get_project_type_display }}</p>
+                                        <p><strong>Name:</strong> {{ project.name }}</p>
+                                        <p><strong>Locality:</strong> {{ project.locality_id.name }}</p>
+                                        <p><strong>Plot Size:</strong> {{ project.area_sqyd }}</p>
+                                        <p><strong>Address:</strong> {{ project.address }}</p>
+                                        <p><strong>Landmark:</strong> {{ project.landmark }}</p>
+                                        <p><strong>Price:</strong> {{ project.price }}</p>
+                                        <p><strong>Dimensions:</strong> {{ project.dimensions }}</p>
+                                        <p><strong>Facing:</strong> {{ project.facing }}</p>
+                                        <p><strong>Main Image:</strong> 
+                                        {% if project.main_image %} <img width="150" src="{{ project.main_image.url }}" />
+                                        {% else %}
+                                            <span>No Image</span>
+                                        {% endif %}
+                                        </p>
+                                        <p><strong>Layout:</strong> 
+                                        {% if project.layout  %} <img width="150" src="{{ project.layout.url }}" />
+                                        {% else %}
+                                            <span>No Image</span>
+                                        {% endif %}
+                                        </p>
+                                        <p><strong>Status:</strong> {{ project.get_status_display }}</p>
+                                    </div>
+                                    <div class="col-12 col-sm-12">
+                                     <h3>Project Amenities:</h3>
+                                        <div class="row">
+                                            {% if projectAmenities %}
+                                                {% for projectAmenity in projectAmenities %}
+                                                    <div class="col-2 col-sm-4 col-md-2">
+                                                        <div class="card">
+                                                            <div class="card-body">
+                                                                <p>{{ projectAmenity.amenity_id.name }}</p>
+                                                            </div>
+                                                        </div>  
+                                                    </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header" id="headingFour">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="true" aria-controls="collapseFour">
+                        Project Gallery
+                        </button>
+                    </h2>
+                </div>
+
+                    <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#accordionExample">
+                        <div class="card-body">
+                            <div class="container">
+                                <div class="row">
+                                    {% if projectMedias %}
+                                        {% for projectMedia in projectMedias %}
+                                            <div class="col-4 col-sm-4 col-md-6">
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        {% if projectMedia.file_extension in "jpg jpeg png gif" %}
+                                                            <img src="{{ projectMedia.file.url }}" width="150" />
+                                                        {% endif %}
+                                                        {% if projectMedia.file_extension in "mp4 mov avi mkv" %}
+                                                            <video width="200" controls>
+                                                                <source src="{{ projectMedia.file.url }}" type="video/mp4">
+                                                            </video>
+                                                        {% endif %}
+                                                        {% if projectMedia.file_extension == "pdf" %}
+                                                            <a href="{{ projectMedia.file.url }}" target="_blank" class="btn btn-info">
+                                                                Open PDF
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header" id="headingTwo">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                    Project Workers
+                    </button>
+                </h2>
+                </div>
+
+                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                <div class="card-body">
+                    <div class="container">
+                        <div class="row">
+                            {% if projectWorkers %}
+                                {% for projectWorker in projectWorkers %}
+                                    <div class="col-6 col-sm-3">
+
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Name:</strong> {{ projectWorker.worker_id.name }}</p>
+                                            <p><strong>Wages Type:</strong> {{ projectWorker.get_wages_type_display }}</p>
+                                            <p><strong>Wages:</strong> {{ projectWorker.wages }}</p>
+                                            <p><strong>Status:</strong> {{ projectWorker.get_status_display }}</p>
+                                        </div>
+                                    </div>
+                                        
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header" id="headingThree">
+                <h2 class="mb-0">
+                    <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                    Project House
+                    </button>
+                </h2>
+                </div>
+                <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+                <div class="card-body">
+                <div class="container">
+                        <div class="row">
+                    {% if projectHouses %}
+                        {% for projectHouse in projectHouses %}
+                            <div class="col-12 col-md-3 col-sm-12">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Plot No:</strong> {{ projectHouse.plot_no }}</p>
+                                            <p><strong>Area Sq Yard:</strong> {{ projectHouse.area_sqyd }}</p>
+                                            <p><strong>Dimension:</strong> {{ projectHouse.dimension }}</p>
+                                            <p><strong>Bedrooms:</strong> {{ projectHouse.bedrooms }}</p>
+                                            <p><strong>Bathrooms:</strong> {{ projectHouse.bathrooms }}</p>
+                                            <p><strong>Kitchen:</strong> {{ projectHouse.Kitchen }}</p>
+                                            <p><strong>Balconies:</strong> {{ projectHouse.balconies }}</p>
+                                            <p><strong>Parking:</strong> {{ projectHouse.parking }}</p>
+                                            <p><strong>Total Floors:</strong> {{ projectHouse.total_floors }}</p>
+                                            <p><strong>Price:</strong> {{ projectHouse.price }}</p>
+                                            <p><strong>House Images:</strong> 
+                                            
+                                            {% if project.house_images  %} <img width="150" src="{{ project.house_images.url }}" />
+                                            {% else %}
+                                                <span>No Image</span>
+                                            {% endif %}
+                                            </p>
+                                            <p><strong>Layout:</strong> 
+                                            {% if project.layout  %} <img width="150" src="{{ project.layout.url }}" />
+                                            {% else %}
+                                                <span>No Image</span>
+                                            {% endif %}
+                                            </p>
+                                            <p><strong>Complete Percentage:</strong> {{ projectHouse.complete_percentage }}</p>
+                                            <p><strong>Status:</strong> {{ projectHouse.get_status_display }}</p>
+                                        </div>
+                                    </div>
+                            </div>
+                            
+                        {% endfor %}
+                    {% endif %}
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>              
+    </div>
+
+
+{% endblock %}
