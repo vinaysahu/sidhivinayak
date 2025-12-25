@@ -20,8 +20,8 @@ class CustomerEnquiry(models.Model):
 
     project_id = models.ForeignKey(Projects, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Project")
     name = models.CharField(max_length=255)
-    phone_no = models.CharField(max_length=20)
-    email = models.EmailField( max_length=255, null=True, blank=True )
+    phone_no = models.CharField(max_length=20, unique=True)
+    email = models.EmailField( max_length=255, null=True, blank=True, unique=True )
     requirement = models.TextField(help_text="Client requirement / expectation" )
     budget_min = models.DecimalField( max_digits=12, decimal_places=2, null=True, blank=True )
     budget_max = models.DecimalField( max_digits=12, decimal_places=2, null=True, blank=True )
