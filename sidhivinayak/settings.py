@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ['13.235.165.205','localhost','127.0.0.1']
 
 INSTALLED_APPS = [
     "customers.apps.CustomersConfig",
+    "contractor.apps.ContractorConfig",
     "projects.apps.ProjectsConfig",
     "workers.apps.WorkersConfig",
     "globals.apps.GlobalsConfig",
