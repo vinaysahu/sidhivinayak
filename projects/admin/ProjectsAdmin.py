@@ -29,8 +29,8 @@ class ProjectMediaInline(admin.TabularInline):
     readonly_fields =['preview','type']
 
     def preview(self, obj):
-        if not obj.file:
-            return "No file"
+        if not obj or not obj.pk:
+            return ""
 
         url = obj.file.url
         ext = obj.file.name.split('.')[-1].lower()
@@ -114,6 +114,8 @@ class ProjectHouseInline(admin.TabularInline):
     readonly_fields= ['get_house_edit_action_list','get_house_duplicate_action_list']
     
     def get_house_edit_action_list(self, obj):
+        if not obj or not obj.pk:
+            return ""
         edit_url = reverse("admin:projects_projecthouses_change", args=[obj.id])
 
         return format_html(
@@ -123,6 +125,8 @@ class ProjectHouseInline(admin.TabularInline):
     get_house_edit_action_list.short_description="Actions"
 
     def get_house_duplicate_action_list(self, obj):
+        if not obj or not obj.pk:
+            return ""
         duplicate_url = reverse("admin:projecthouse_duplicate", args=[obj.id])
 
         if obj.status == ProjectHouses.STATUS_AVAILABLE:
@@ -155,6 +159,8 @@ class ProjectsAdmin(admin.ModelAdmin):
     list_filter = ["status", "project_type"]
 
     def get_action_list(self, obj):
+        if not obj or not obj.pk:
+            return ""
         custom_url = reverse(
             "admin:project_view",
             args=[obj.id]
