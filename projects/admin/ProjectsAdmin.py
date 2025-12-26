@@ -35,27 +35,25 @@ class ProjectMediaInline(admin.TabularInline):
         url = obj.file.url
         ext = obj.file.name.split('.')[-1].lower()
 
-        return ext
-
         # Image Preview
         if ext in ['jpg', 'jpeg', 'png', 'gif']:
-            return format_html(f'<img src="{url}" width="120" style="border-radius:6px;" />')
+            return format_html('<img src="{}" width="120" style="border-radius:6px;" />',url)
 
         # Video Preview
         if ext in ['mp4', 'mov', 'avi', 'mkv']:
-            return format_html(f'''
+            return format_html('''
                 <video width="200" controls>
-                    <source src="{url}" type="video/mp4">
+                    <source src="{}" type="video/mp4">
                 </video>
-            ''')
+            ''',url)
 
         # PDF Preview
         if ext == 'pdf':
-            return format_html(f'''
-                <a href="{url}" target="_blank" style="padding:6px 12px; background:#007bff; color:white; border-radius:4px; text-decoration:none;">
+            return format_html('''
+                <a href="{}" target="_blank" style="padding:6px 12px; background:#007bff; color:white; border-radius:4px; text-decoration:none;">
                     Open PDF
                 </a>
-            ''')
+            ''',url)
 
         return "Preview not available"
 
