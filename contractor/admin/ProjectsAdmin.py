@@ -16,6 +16,8 @@ class ProjectWorkersInline(admin.TabularInline):
     readonly_fields=['mark_today_attendance']
 
     def mark_today_attendance(self, obj):
+        if not obj or not obj.pk:
+            return ""
         edit_url = reverse("admin:contractor_projectworkerattendances_add")
         view_url = reverse("admin:contractor_projectworkerattendances_changelist")
         
