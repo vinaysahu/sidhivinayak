@@ -153,7 +153,7 @@ class ProjectsAdmin(admin.ModelAdmin):
     list_display = ["name", "project_type", "locality_id", "address", "area_sqyd", "status", "get_action_list" ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')       # Remove from FORM
 
-    inlines = [ProjectAmenitiesInline, ProjectMediaInline, ProjectWorkersInline, ProjectHouseInline, ProjectMaterialsInline]
+    inlines = [ProjectAmenitiesInline, ProjectWorkersInline, ProjectHouseInline, ProjectMaterialsInline]
 
     search_fields = ["name"]
     list_filter = ["status", "project_type"]
