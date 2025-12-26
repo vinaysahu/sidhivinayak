@@ -35,6 +35,8 @@ class ProjectMediaInline(admin.TabularInline):
         url = obj.file.url
         ext = obj.file.name.split('.')[-1].lower()
 
+        return ext
+
         # Image Preview
         if ext in ['jpg', 'jpeg', 'png', 'gif']:
             return format_html(f'<img src="{url}" width="120" style="border-radius:6px;" />')
