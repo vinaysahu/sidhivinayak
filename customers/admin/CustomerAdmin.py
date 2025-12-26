@@ -9,7 +9,6 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = [ "username", "show_full_name", "show_image", "email", "phone_no", "alt_phone_no", "address", "status", "created_at", "updated_at" ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at','auth_key', 'password_hash', 'password_reset_token')       # Remove from FORM
 
-
     def show_full_name(self, obj):
         if obj.first_name and obj.last_name:
             return obj.first_name+ ""+ obj.last_name

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from projects.models.Projects import Projects
+from django.contrib.auth.models import User
 
 class CustomerEnquiry(models.Model):
 
@@ -36,6 +37,13 @@ class CustomerEnquiry(models.Model):
     notes = models.TextField( null=True, blank=True, help_text="Internal notes" )
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=10)
     follow_up_date = models.DateField( null=True, blank=True )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_customer_enquiry'
+    )
     created_at = models.DateField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 

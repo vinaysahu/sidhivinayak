@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from projects.models.Projects import Projects
-
+from django.contrib.auth.models import User
 
 class PropertySellRequest(models.Model):
 
@@ -83,6 +83,14 @@ class PropertySellRequest(models.Model):
     status = models.SmallIntegerField(
         choices=STATUS_CHOICES,
         default=STATUS_NEW
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_property_sell_request'
     )
 
     created_at = models.DateTimeField(default=timezone.now)
