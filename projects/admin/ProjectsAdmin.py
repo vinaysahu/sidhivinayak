@@ -29,7 +29,7 @@ class ProjectMediaInline(admin.TabularInline):
     readonly_fields =['preview','type']
 
     def preview(self, obj):
-        if not obj or not obj.pk:
+        if not obj or not obj.pk or not obj.file:
             return ""
 
         url = obj.file.url
