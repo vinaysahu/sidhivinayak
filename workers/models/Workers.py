@@ -1,5 +1,7 @@
 from django.db import models
 from .WorkerTypes import WorkerTypes
+from django.contrib.auth.models import User
+from common.middleware.threadlocal import get_current_user
 from django.utils import timezone
 from django.core.validators import RegexValidator
 
@@ -44,6 +46,13 @@ class Workers(models.Model):
     wages_type = models.SmallIntegerField(choices=WAGES_CHOICES, default=WAGES_PER_DAY)
     
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_projects'
+    )
     created_at = models.DateField(default=timezone.now)
     updated_at = models.DateField(auto_now=True, null=True, blank=True)
 
@@ -53,3 +62,11 @@ class Workers(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.pk:  # CREATE time
+            if not self.created_by:
+                user = get_current_user()
+                if user and user.is_authenticated and not user.is_superuser:
+                    self.created_by = user
+        super().save(*args, **kwargs)

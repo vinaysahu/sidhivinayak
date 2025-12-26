@@ -25,6 +25,16 @@ class ProjectWorkersInline(admin.TabularInline):
             edit_url, obj.id, view_url, obj.project_id.id, obj.worker_id.id
         )
     mark_today_attendance.short_description="Action"
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+        if db_field.name == "worker_id" and not request.user.is_superuser:
+            field.queryset = field.queryset.filter(
+                created_by=request.user
+            )
+
+        return field
 
     class Media:
         js = ("admin/projects/projectworker_auto_fill.js",)
