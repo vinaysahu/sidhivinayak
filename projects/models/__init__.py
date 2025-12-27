@@ -4,3 +4,4 @@ from .ProjectHouses import *
 from .ProjectWorkers import *
 from .ProjectWorkerAttendances import *
 from .ProjectMaterials import *
+from .UserProjectPermissions import *

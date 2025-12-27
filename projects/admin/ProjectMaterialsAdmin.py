@@ -2,8 +2,10 @@ from django.contrib import admin, messages
 from globals.models.Materials import Materials
 from globals.models.Suppliers import Suppliers
 from ..models.ProjectMaterials import ProjectMaterials
+from ..models.Projects import Projects
+from projects.models.UserProjectPermissions import UserProjectPermissions
 from django.shortcuts import redirect
-from common.filters.adminModelFilter import TableForiegnKeyListFilter
+from common.filters.adminModelFilter import TableForiegnKeyListFilter,TableForiegnKeyListHasPermissionFilter
       
 class ProjectMaterialsAdmin(admin.ModelAdmin):
 
@@ -13,10 +15,42 @@ class ProjectMaterialsAdmin(admin.ModelAdmin):
     # readonly_fields=['project_id']
 
     search_fields = ["unit", 'total_amount','quantity','paid_amount']
-    list_filter = ["payment_status", TableForiegnKeyListFilter("Suppliers", "supplier_id","shop_name",Suppliers), TableForiegnKeyListFilter("Materials", "material_id","name",Materials)]
+    list_filter = ["payment_status", TableForiegnKeyListHasPermissionFilter("Projects", "project_id","name",Projects,UserProjectPermissions), TableForiegnKeyListFilter("Suppliers", "supplier_id","shop_name",Suppliers), TableForiegnKeyListFilter("Materials", "material_id","name",Materials)]
 
     # def has_module_permission(self, request):
     #     return False
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+        if db_field.name == "project_id" and not request.user.is_superuser:
+            allowed_project_ids = UserProjectPermissions.objects.filter(
+                user=request.user
+            ).values_list('projects__id', flat=True)
+
+            if allowed_project_ids:
+                field.queryset = field.queryset.filter(
+                    id__in = allowed_project_ids
+                )
+            print("allowed_project_ids", allowed_project_ids)
+            print("field", field.queryset)
+
+        return field
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        allowed_project_ids = UserProjectPermissions.objects.filter(
+            user=request.user
+        ).values_list('projects__id', flat=True)
+
+        if not allowed_project_ids:
+            return qs
+
+        return qs.filter(project_id__id__in=allowed_project_ids)
     
     def get_fields(self, request, obj=None):
         fields = super().get_fields(request, obj)

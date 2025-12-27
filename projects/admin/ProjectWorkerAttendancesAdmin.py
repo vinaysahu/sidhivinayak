@@ -3,8 +3,9 @@ from ..models.ProjectWorkerAttendances import ProjectWorkerAttendances
 from ..models.Projects import Projects
 from ..models.ProjectWorkers import ProjectWorkers
 from workers.models.Workers import Workers
+from projects.models.UserProjectPermissions import UserProjectPermissions
 from django.shortcuts import redirect
-from common.filters.adminModelFilter import TableForiegnKeyListFilter
+from common.filters.adminModelFilter import TableForiegnKeyListFilter, TableForiegnKeyListHasPermissionFilter
 from django.utils.html import format_html
 from django.utils import timezone
 
@@ -16,10 +17,25 @@ class ProjectWorkerAttendancesAdmin(admin.ModelAdmin):
     # exclude = ('project_worker_id', 'total_amount', 'project_id', 'worker_id', 'remaining_amount', 'working_date', 'created_at', 'updated_at')       # Remove from FORM
 
     # search_fields = ["plot_no"]
-    list_filter = [TableForiegnKeyListFilter("Projects", "project_id","name",Projects), TableForiegnKeyListFilter("Workers", "worker_id","name",Workers)]
+    list_filter = [TableForiegnKeyListHasPermissionFilter("Projects", "project_id","name",Projects,UserProjectPermissions), TableForiegnKeyListFilter("Workers", "worker_id","name",Workers)]
 
     def get_project_name(self, obj):
         return format_html("{} ({})",obj.project_worker_id.project_id,obj.project_worker_id.worker_id)
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        allowed_project_ids = UserProjectPermissions.objects.filter(
+            user=request.user
+        ).values_list('projects__id', flat=True)
+
+        if not allowed_project_ids:
+            return qs
+
+        return qs.filter(project_id__id__in=allowed_project_ids)
     
     def get_exclude(self, request, obj=None):
 

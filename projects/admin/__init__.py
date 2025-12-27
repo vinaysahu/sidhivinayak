@@ -3,3 +3,4 @@ from .ProjectsAdmin import *
 from .ProjectHousesAdmin import *
 from .ProjectWorkerAttendancesAdmin import *
 from .ProjectMaterialsAdmin import *
+from .UserProjectPermissionsAdmin import *

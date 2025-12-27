@@ -5,6 +5,7 @@ from globals.models.Countries import Countries
 from globals.models.States import States
 from globals.models.Cities import Cities
 from globals.models.Localities import Localities
+from django.contrib.auth.models import User
 
 class Projects(models.Model):
     STATUS_ACTIVE = 10
@@ -56,6 +57,7 @@ class Projects(models.Model):
     main_image = models.ImageField(upload_to="images/projects/", blank=True, null=True)
     layout = models.ImageField(upload_to="images/projects/", blank=True, null=True)
     gallery_images = models.JSONField(blank=True, null=True)
+    
 
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_at = models.DateField(default=timezone.now)

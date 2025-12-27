@@ -38,6 +38,34 @@ def TableForiegnKeyListFilter(field_title, field_name, parent_field_name, table)
 
     return ForiegnKeyFilter
 
+def TableForiegnKeyListHasPermissionFilter(field_title, field_name, parent_field_name, table, permissionTable):
+    class ForiegnKeyFilter(admin.SimpleListFilter):
+        title = field_title or field_name.replace("_", " ").title()
+        parameter_name = field_name
+
+        def lookups(self, request, model_admin):
+            allowed_project_ids= None
+            if not request.user.is_superuser:
+                allowed_project_ids = permissionTable.objects.filter(
+                    user=request.user
+                ).values_list('projects__id', flat=True)
+
+                tableDatas = table.objects.filter(
+                    id__in=allowed_project_ids
+                ).all()
+            else:
+                tableDatas = table.objects.all()
+            return [(tableData.id, getattr(tableData, parent_field_name)) for tableData in tableDatas]
+
+        def queryset(self, request, queryset):
+            if self.value():
+                # IMPORTANT: Actual filtering
+                filter_kwargs = {field_name: self.value()}
+                return queryset.filter(**filter_kwargs)
+            return queryset
+
+    return ForiegnKeyFilter
+
 
 def SameTableParentFilter(field_title, field_name, table):
     class ParentCategoryFilter(admin.SimpleListFilter):

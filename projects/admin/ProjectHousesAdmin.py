@@ -1,10 +1,11 @@
 from django.contrib import admin, messages
 from ..models.Projects import Projects
 from ..models.ProjectHouses import ProjectHouses
+from projects.models.UserProjectPermissions import UserProjectPermissions
 from django.urls import path
 from django.shortcuts import redirect
 from django.urls import resolve
-from common.filters.adminModelFilter import TableForiegnKeyListFilter
+from common.filters.adminModelFilter import TableForiegnKeyListHasPermissionFilter
       
 class ProjectHousesAdmin(admin.ModelAdmin):
 
@@ -14,7 +15,22 @@ class ProjectHousesAdmin(admin.ModelAdmin):
     # readonly_fields=['project_id']
 
     search_fields = ["plot_no"]
-    list_filter = ["status", TableForiegnKeyListFilter("Projects", "project_id","name",Projects)]
+    list_filter = ["status", TableForiegnKeyListHasPermissionFilter("Projects", "project_id","name",Projects,UserProjectPermissions)]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+        if db_field.name == "project_id" and not request.user.is_superuser:
+            allowed_project_ids = UserProjectPermissions.objects.filter(
+                user=request.user
+            ).values_list('projects__id', flat=True)
+
+            if allowed_project_ids:
+                field.queryset = field.queryset.filter(
+                    id__in=allowed_project_ids
+                )
+
+        return field
 
     # def has_module_permission(self, request):
     #     return False
@@ -118,6 +134,21 @@ class ProjectHousesAdmin(admin.ModelAdmin):
             fields.remove("project_id")
 
         return fields
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        allowed_project_ids = UserProjectPermissions.objects.filter(
+            user=request.user
+        ).values_list('projects__id', flat=True)
+
+        if not allowed_project_ids:
+            return qs
+
+        return qs.filter(project_id__id__in=allowed_project_ids)
     
     def save_model(self, request, obj, form, change):
         

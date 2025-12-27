@@ -5,6 +5,7 @@ from ..models.ProjectWorkers import ProjectWorkers
 from ..models.ProjectHouses import ProjectHouses
 from ..models.ProjectMedia import ProjectMedia
 from ..models.ProjectMaterials import ProjectMaterials
+from ..models.UserProjectPermissions import UserProjectPermissions
 from django.urls import path, reverse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.html import format_html
@@ -168,6 +169,20 @@ class ProjectsAdmin(admin.ModelAdmin):
         return format_html('<a href="{}" title="View"><i class="fa fa-eye text-green"></i></a>', custom_url)
     get_action_list.short_description="Actions"
         
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        allowed_project_ids = UserProjectPermissions.objects.filter(
+            user=request.user
+        ).values_list('projects__id', flat=True)
+
+        if not allowed_project_ids:
+            return qs
+
+        return qs.filter(id__in=allowed_project_ids)
 
     def get_urls(self):
         urls = super().get_urls()
