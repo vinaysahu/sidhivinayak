@@ -2,3 +2,10 @@ cryptography
 django-jazzmin
 django-debug-toolbar
 Pillow
+pytesseract
+langchain
+dotenv
+langchain_community
+langchain_huggingface
+
+num2words

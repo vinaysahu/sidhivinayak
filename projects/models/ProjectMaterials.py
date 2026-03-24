@@ -23,16 +23,10 @@ class ProjectMaterials(models.Model):
     # ---- BASIC INFO ----
     project_id = models.ForeignKey( Projects, on_delete=models.CASCADE, related_name="project_material")
 
-    material_id = models.ForeignKey( Materials, on_delete=models.CASCADE, related_name="material")
-
-    # ---- QUANTITY ----
-    quantity = models.DecimalField( max_digits=10, decimal_places=2, help_text="Quantity received")
-
-    unit = models.CharField( max_length=20, help_text="Bags / Tons / CFT / Kg", null=True, blank=True)
-
-    rate = models.DecimalField( max_digits=10, decimal_places=2, help_text="Rate per unit", null=True, blank=True)
-
+    sub_total = models.DecimalField( max_digits=15, decimal_places=2, null=True, blank=True)
+    gst = models.DecimalField( max_digits=15, decimal_places=2, null=True, blank=True)
     total_amount = models.DecimalField( max_digits=15, decimal_places=2)
+    round_total_amount = models.IntegerField( null=True, blank=True)
 
     # ---- SUPPLIER DETAILS ----
     supplier_id = models.ForeignKey( Suppliers, on_delete=models.CASCADE, related_name="supplier")
@@ -72,8 +66,7 @@ class ProjectMaterials(models.Model):
         ordering = ['-received_date']
 
     def save(self, *args, **kwargs):
-        self.total_amount = self.quantity * self.rate
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.material_id.name} - {self.project_id.name}"
+        return f"{self.project_id.name} - {self.supplier_id.shop_name}"

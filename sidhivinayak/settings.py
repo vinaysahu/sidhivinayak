@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['13.235.165.205','localhost','127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
+    "accounts.apps.AccountsConfig",
     "customers.apps.CustomersConfig",
     "contractor.apps.ContractorConfig",
     "projects.apps.ProjectsConfig",

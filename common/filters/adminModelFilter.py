@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 import os
+from django.db.models import Q
 
 def UniqueTableColumnListFilter(field_title, field_name, table):
     class UniqueCapacityFilter(admin.SimpleListFilter):
@@ -37,6 +38,43 @@ def TableForiegnKeyListFilter(field_title, field_name, parent_field_name, table)
             return queryset
 
     return ForiegnKeyFilter
+
+from django.contrib import admin
+from django.db.models import Q
+
+def customDropdownFilterForAnotherTable(title, parameter_name, field_name, table, filter_fields):
+
+    if not all([title, parameter_name, table, field_name, filter_fields]):
+        raise ValueError("All parameters are required")
+
+    def lookups(self, request, model_admin):
+        tableDatas = table.objects.all()
+        return [(u.id, getattr(u, field_name)) for u in tableDatas]
+
+    def queryset(self, request, queryset):
+        table_id = self.value()
+
+        if table_id:
+            query = Q()  # ✅ define
+
+            for field in filter_fields:
+                query |= Q(**{field: table_id})
+
+            return queryset.filter(query)
+
+        return queryset.none()
+
+    # ✅ Dynamic class create
+    return type(
+        'CustomUserFilter',
+        (admin.SimpleListFilter,),
+        {
+            'title': title,
+            'parameter_name': parameter_name,
+            'lookups': lookups,
+            'queryset': queryset,
+        }
+    )
 
 def TableForiegnKeyListHasPermissionFilter(field_title, field_name, parent_field_name, table, permissionTable):
     class ForiegnKeyFilter(admin.SimpleListFilter):

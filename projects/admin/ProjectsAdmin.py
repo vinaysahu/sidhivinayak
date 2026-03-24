@@ -67,7 +67,7 @@ class ProjectMaterialsInline(admin.TabularInline):
     max_num = 1  # restrict to max 5 images
     verbose_name = "Project Material"
     verbose_name_plural = "Project Materials"
-    fields = ['material_id','quantity','unit','total_amount', 'supplier_id', 'paid_amount']   # 👈 define display order
+    fields = ['sub_total', 'gst', 'total_amount', 'supplier_id', 'paid_amount']   # 👈 define display order
 
     def has_add_permission(self, request, obj=None):
         return False
