@@ -1,4 +1,4 @@
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 import re
 import json
 from dotenv import load_dotenv
