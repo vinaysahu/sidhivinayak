@@ -1,0 +1,74 @@
+{% extends 'frontend/base.html' %}
+
+{% block content %}
+
+<h2>Welcome {{name}}</h2>
+
+<div class="container">
+<div class="row mt-3 mb-5">
+
+    <div class="col-md-2">
+        <div class="card p-3 shadow">
+            <h5>House No</h5>
+            <h3>{{house_no}}</h3>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 shadow">
+            <h5>Total Amount</h5>
+            <h3>{{total_amount}}</h3>
+            <small>{{total_amount_words}}</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 shadow">
+            <h5>Paid Amount</h5>
+            <h3>{{paid_amount}}</h3>
+            <small>{{paid_amount_words}}</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 shadow">
+            <h5>Balance</h5>
+            <h3>{{balance}}</h3>
+            <small>{{balance_words}}</small>
+        </div>
+    </div>
+
+</div>
+{% load custom_filters %}
+{% if transactions|length > 0 %}
+
+<div class="row">
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Account</th>
+      <th scope="col">Amount</th>
+      <th scope="col">Paid On</th>
+      <th scope="col">Paid To</th>
+      <th scope="col">Details</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for transaction in transactions %}
+    <tr>
+      <th scope="row">{{ forloop.counter }}</th>
+      <td>{{transaction.payment_type}}</td>
+      <td>{{transaction.amount|indian_currency}} <br/> <small>{{transaction.amount|amount_in_words}}</small></td>
+      <td>{{transaction.paid_on}}</td>
+      <td>{{transaction.paid_to.first_name}}</td>
+      <td>{{transaction.detail}}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endif %}
+
+{% endblock %}

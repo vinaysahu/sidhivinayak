@@ -1,7 +1,7 @@
 from django.contrib import admin
 from projects.models.Projects import Projects
-from ..models.UserLedger import UserLedger
-from ..models.UserLedgerTransaction import UserLedgerTransaction
+from customers.models.CustomerLedger import CustomerLedger
+from customers.models.CustomerLedgerTransaction import CustomerLedgerTransaction
 from common.filters.adminModelFilter import TableForiegnKeyListFilter
 from django.db.models import Q
 from django.db.models import F
@@ -9,14 +9,14 @@ from num2words import num2words
 from common.utils.format_currency import format_indian_currency
 from django.utils.html import format_html
 
-class UserLedgerTransactionsInline(admin.TabularInline):
-    model = UserLedgerTransaction
+class CustomerLedgerTransactionsInline(admin.TabularInline):
+    model = CustomerLedgerTransaction
     extra = 2
     exclude = ('created_at', 'updated_at') 
     # max_num = 10 
-    verbose_name = "User Ledger Transaction"
-    verbose_name_plural = "User Ledger Transactions"
-    fields = ['paid_on','payment_type','amount','detail'] 
+    verbose_name = "Customer Ledger Transaction"
+    verbose_name_plural = "Customer Ledger Transactions"
+    fields = ['paid_on','payment_type','amount','paid_to','detail'] 
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -34,47 +34,20 @@ class UserLedgerTransactionsInline(admin.TabularInline):
         return False
 
       
-class UserLedgerAdmin(admin.ModelAdmin):
+class CustomerLedgerAdmin(admin.ModelAdmin):
 
-    list_display = ['creditor_name', 'debtor_name', 'project_id', 'formatted_amount', 'formatted_balance', 'paid_amount' ] # grid mae kaisa view
+    list_display = ['customer_id', 'project_id', 'project_house_id', 'formatted_amount', 'formatted_balance', 'paid_amount' ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')
 
     readonly_fields = ['paid_amount']
 
-    def creditor_name(selff, obj):
-        if obj.creditor.first_name: 
-            return obj.creditor.first_name + " " + obj.creditor.last_name
-        return obj.creditor
-    
-    def debtor_name(selff, obj):
-        if obj.debtor.first_name: 
-            return obj.debtor.first_name + " " + obj.debtor.last_name
-        return obj.debtor
-
     def formatted_amount(self, obj):
-        if obj.amount:
-
-            # number → words
-            words = num2words(obj.amount, lang='en_IN').title()
-            return format_html(
-            "{}<br><small>({})</small>",
-            format_indian_currency(obj.amount),
-            words
-        )
-        return "-"
+        return format_indian_currency(obj.amount)
     formatted_amount.short_description = "Amount"
 
     # 👇 FORMAT BALANCE
     def formatted_balance(self, obj):
-        if obj.balance:
-
-            words = num2words(obj.balance, lang='en_IN').title()
-            return format_html(
-            "{}<br><small>({})</small>",
-            format_indian_currency(obj.balance),
-            words
-        )
-        return "-"
+        return format_indian_currency(obj.balance)
     formatted_balance.short_description = "Balance"
 
     def paid_amount(self, obj):
@@ -91,7 +64,7 @@ class UserLedgerAdmin(admin.ModelAdmin):
         return "-"
     paid_amount.short_description = "Paid Amount"
 
-    inlines = [UserLedgerTransactionsInline]
+    inlines = [CustomerLedgerTransactionsInline]
 
 
     search_fields = ['amount', 'balance']
@@ -112,4 +85,4 @@ class UserLedgerAdmin(admin.ModelAdmin):
         ).distinct()
 
 
-admin.site.register(UserLedger,UserLedgerAdmin)
+admin.site.register(CustomerLedger,CustomerLedgerAdmin)
