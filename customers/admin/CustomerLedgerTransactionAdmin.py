@@ -1,7 +1,8 @@
 from django.contrib import admin
 
 from ..models.Customers import Customers
-from ..models.CustomerRequestTransaction import CustomerRequestTransaction
+from ..models.CustomerLedgerTransaction import CustomerLedgerTransaction
+from ..forms.CustomerLedgerTransactionForm import CustomerLedgerTransactionForm
 from common.filters.adminModelFilter import customDropdownFilterForAnotherTable
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -9,12 +10,15 @@ from projects.models.Projects import Projects
 from django.db.models import F
 from common.utils.format_currency import format_indian_currency
       
-class CustomerTransactionRequestAdmin(admin.ModelAdmin):
+class CustomerLedgerTransactionAdmin(admin.ModelAdmin):
 
-    list_display = ['paid_on', 'paid_to', 'payment_type','formatted_amount','detail', 'status' ] # grid mae kaisa view
+    form = CustomerLedgerTransactionForm
+
+    list_display = ['paid_on','payment_type','formatted_amount','detail' ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')
 
     list_filter = [customDropdownFilterForAnotherTable("Customers", "customers", "first_name", Customers, ["customer_ledger__customer_id"]  )]
+
     
     def formatted_amount(self, obj):
         return format_indian_currency(obj.amount)
@@ -36,6 +40,20 @@ class CustomerTransactionRequestAdmin(admin.ModelAdmin):
         return False
 
     class Media:
-            js = ('admin/js/amountFormat1.js',)    
+            js = ('admin/js/amountFormat1.js',)
 
-admin.site.register(CustomerRequestTransaction,CustomerTransactionRequestAdmin)
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        qs = qs.order_by(F('paid_on').asc(nulls_last=True))
+        user = request.user
+
+        if user.is_superuser:
+            return qs
+
+        return qs.filter(
+            Q(user_ledger__creditor=user) | Q(user_ledger__debtor=user)
+        ).distinct()
+    
+
+
+admin.site.register(CustomerLedgerTransaction,CustomerLedgerTransactionAdmin)
