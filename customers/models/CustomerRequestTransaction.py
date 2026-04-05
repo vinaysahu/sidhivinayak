@@ -2,17 +2,27 @@ from django.db import models
 from .CustomerLedger import CustomerLedger   
 from django.contrib.auth.models import User
 
-class CustomerLedgerTransaction(models.Model):
+class CustomerRequestTransaction(models.Model):
 
     PAYMENT_TYPE_CHOICES = (
         ('credited', 'Credited'),
         ('debited', 'Debited'),
     )
 
+    STATUS_NEW = 10
+    STATUS_ACCEPTED = 20
+    STATUS_DELETED = 30
+
+    STATUS_CHOICES = (
+        (STATUS_NEW, "New"),
+        (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_DELETED, "Deleted"),
+    )
+
     customer_ledger = models.ForeignKey(
         CustomerLedger,
         on_delete=models.CASCADE,
-        related_name='customer_ledger_transactions'
+        related_name='customer_transactions'
     )
     payment_type = models.CharField(
         max_length=10,
@@ -26,8 +36,9 @@ class CustomerLedgerTransaction(models.Model):
     paid_to = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='paid_to_transaction'
+        related_name='paid_to_user'
     )
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=10)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
