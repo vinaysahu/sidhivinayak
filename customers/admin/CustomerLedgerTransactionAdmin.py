@@ -14,10 +14,10 @@ class CustomerLedgerTransactionAdmin(admin.ModelAdmin):
 
     form = CustomerLedgerTransactionForm
 
-    list_display = ['paid_on','payment_type','formatted_amount','detail' ] # grid mae kaisa view
+    list_display = ['paid_on', 'paid_to', 'payment_type','formatted_amount','detail' ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')
 
-    list_filter = [customDropdownFilterForAnotherTable("Customers", "customers", "first_name", Customers, ["customer_ledger__customer_id"]  )]
+    list_filter = [customDropdownFilterForAnotherTable("Customers", "customers", "first_name", Customers, ["customer_ledger__customer_id"]  ), 'paid_to']
 
     
     def formatted_amount(self, obj):
