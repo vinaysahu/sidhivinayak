@@ -1,0 +1,17 @@
+{% extends "admin/change_list.html" %}
+
+{% block search %}
+    {{ block.super }}
+
+    <div style="
+        margin: 15px 0;
+        padding: 12px 15px;
+        background: #f8f8f8;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: bold;
+    ">
+        Total Amount: {{ total_amount }}
+    </div>
+{% endblock %}
