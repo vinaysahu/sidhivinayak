@@ -3,153 +3,177 @@
 
 {% block extrastyle %}
     {{ block.super }}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .card-header { font-weight: bold; background: #f8f9fa; border-bottom: 1px solid rgba(0,0,0,.125); }
-        .info-label { color: #666; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .info-value { font-weight: 600; color: #333; font-size: 1rem; }
+        :root {
+            --primary: #6366f1;
+            --secondary: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        .card-header { 
+            font-weight: 700; 
+            background: transparent; 
+            border-bottom: 1px solid #e2e8f0; 
+            padding: 1.25rem 1.5rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+        }
+        .info-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .info-value { font-weight: 600; color: #1e293b; font-size: 1.1rem; }
+        
         .gallery-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
         }
         .gallery-item {
-            position: relative;
-            aspect-ratio: 4/3;
+            aspect-ratio: 16/9;
             overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 3px solid #fff;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
-        .gallery-item:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
-        .gallery-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .financial-summary .card {
-            border-top: 4px solid #007bff;
-            transition: transform 0.2s;
-        }
-        .financial-summary .card:hover { transform: translateY(-3px); }
-        .financial-summary .total-expenses { border-top-color: #dc3545; }
-        .financial-summary .supplier-pay { border-top-color: #28a745; }
-        .financial-summary .worker-pay { border-top-color: #fd7e14; }
-        .financial-summary .other-exp { border-top-color: #6c757d; }
+        .gallery-item:hover { transform: scale(1.03); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
         
-        .table thead th { background-color: #f1f3f5; border-top: none; font-size: 0.85rem; text-transform: uppercase; color: #495057; }
+        .financial-card {
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+            background: #fff;
+            transition: all 0.2s;
+        }
+        .financial-card:hover { transform: translateY(-2px); }
         
+        .table thead th { 
+            background-color: #f8fafc; 
+            color: #64748b; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            font-size: 0.75rem;
+            border-top: none;
+            padding: 1rem 1.5rem;
+        }
+        .table tbody td { padding: 1rem 1.5rem; vertical-align: middle; border-color: #f1f5f9; }
+        
+        .badge-modern {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
         @media print {
             .no-print { display: none !important; }
-            .card { border: 1px solid #ddd !important; box-shadow: none !important; margin-bottom: 20px !important; }
-            .content-wrapper { background: white !important; }
+            .glass-card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
             body { background: white !important; }
-            .main-footer { display: none !important; }
         }
     </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <!-- Header Actions -->
     <div class="row mb-4 no-print">
         <div class="col-12 d-flex justify-content-between align-items-center">
-            <h2 class="m-0 text-dark">{{ project.name }} - Details</h2>
-            <div>
-                <a href="{% url 'admin:projects_projects_change' object_id %}" class="btn btn-outline-primary mr-2">
-                    <i class="fas fa-edit mr-1"></i> Edit Project
+            <h2 class="m-0 font-weight-bold text-dark">{{ project.name }}</h2>
+            <div class="btn-group shadow-sm">
+                <a href="{% url 'admin:projects_projects_change' object_id %}" class="btn btn-white text-primary font-weight-600 border">
+                    <i class="fas fa-edit mr-2"></i> Edit
                 </a>
-                <button onclick="window.print()" class="btn btn-success mr-2">
-                    <i class="fas fa-print mr-1"></i> Print Report
+                <button onclick="window.print()" class="btn btn-white text-success font-weight-600 border mx-2">
+                    <i class="fas fa-print mr-2"></i> Print
                 </button>
-                <a href="{% url 'admin:projects_projects_changelist' %}" class="btn btn-secondary">
-                    <i class="fas fa-list mr-1"></i> Back to List
+                <a href="{% url 'admin:projects_projects_changelist' %}" class="btn btn-primary font-weight-600 px-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Back
                 </a>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <!-- SECTION 1: Project Info -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white"><i class="fas fa-info-circle text-primary mr-2"></i> General Information</div>
-                <div class="card-body">
+        <!-- SECTION 1: General Info -->
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header"><i class="fas fa-layer-group text-primary mr-3"></i> General Overview</div>
+                <div class="card-body p-4">
                     <div class="row">
-                        <div class="col-md-3 col-sm-6 mb-4">
-                            <div class="info-label">Project Name</div>
-                            <div class="info-value">{{ project.name }}</div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-4">
+                        <div class="col-lg-3 col-md-6 mb-4">
                             <div class="info-label">Project Type</div>
                             <div class="info-value">{{ project.get_project_type_display }}</div>
                         </div>
-                        <div class="col-md-3 col-sm-6 mb-4">
-                            <div class="info-label">Current Status</div>
-                            <div class="info-value">
-                                <span class="badge {% if project.status == 10 %}badge-success{% elif project.status == 20 %}badge-info{% elif project.status == 40 %}badge-warning{% else %}badge-danger{% endif %} px-3 py-2" style="font-size: 0.9rem;">
+                        <div class="col-lg-3 col-md-6 mb-4">
+                            <div class="info-label">Status</div>
+                            <div>
+                                <span class="badge badge-modern {% if project.status == 10 %}badge-success{% elif project.status == 20 %}badge-info{% else %}badge-warning{% endif %}">
                                     {{ project.get_status_display }}
                                 </span>
                             </div>
                         </div>
-                        <div class="col-md-3 col-sm-6 mb-4">
+                        <div class="col-lg-3 col-md-6 mb-4">
                             <div class="info-label">Total Area</div>
-                            <div class="info-value">{{ project.area_sqyd }} Sq.Yd.</div>
+                            <div class="info-value">{{ project.area_sqyd }} <span class="text-muted small">Sq.Yd.</span></div>
                         </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="info-label">Location / Address</div>
-                            <div class="info-value">{{ project.address|default:project.locality_id.name }}</div>
-                            <div class="text-muted small">{{ project.city_id.name }}, {{ project.state_id.name }}</div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-4">
-                            <div class="info-label">Start Date</div>
-                            <div class="info-value">{{ project.created_at|date:"d M Y" }}</div>
-                        </div>
-                        <div class="col-md-3 col-sm-6 mb-4">
-                            <div class="info-label">Total Budget / Price</div>
+                        <div class="col-lg-3 col-md-6 mb-4">
+                            <div class="info-label">Budget</div>
                             <div class="info-value text-primary">₹ {{ project.price|default:"0" }}</div>
                         </div>
-                        {% if project.description %}
-                        <div class="col-12">
-                            <hr>
-                            <div class="info-label">Description</div>
-                            <div class="info-value" style="font-weight: 400;">{{ project.description|linebreaks }}</div>
+                        <div class="col-lg-6 col-md-12 mb-4">
+                            <div class="info-label">Location</div>
+                            <div class="info-value">{{ project.address|default:project.locality_id.name }}</div>
+                            <p class="text-muted small mb-0">{{ project.city_id.name }}, {{ project.state_id.name }}</p>
                         </div>
-                        {% endif %}
+                        <div class="col-lg-3 col-md-6 mb-4">
+                            <div class="info-label">Start Date</div>
+                            <div class="info-value">{{ project.created_at|date:"M d, Y" }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- SECTION 5: Financial Summary -->
-        <div class="col-md-12 mb-4 financial-summary">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white"><i class="fas fa-chart-line text-danger mr-2"></i> Financial Summary</div>
-                <div class="card-body">
+        <!-- SECTION 2: Financials -->
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header"><i class="fas fa-chart-pie text-danger mr-3"></i> Financial Summary</div>
+                <div class="card-body p-4">
                     <div class="row">
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="card supplier-pay border-0 shadow-sm p-3 h-100">
-                                <div class="info-label">Supplier Payments</div>
-                                <div class="info-value h4 mb-0 text-success">{{ total_supplier_pay }}</div>
+                        <div class="col-lg-3 mb-3">
+                            <div class="financial-card rounded shadow-sm">
+                                <div class="info-label">Suppliers</div>
+                                <div class="info-value text-success">{{ total_supplier_pay }}</div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="card worker-pay border-0 shadow-sm p-3 h-100">
-                                <div class="info-label">Worker Payments</div>
-                                <div class="info-value h4 mb-0 text-warning">{{ total_worker_pay }}</div>
+                        <div class="col-lg-3 mb-3">
+                            <div class="financial-card rounded shadow-sm" style="border-left-color: #f59e0b;">
+                                <div class="info-label">Workers</div>
+                                <div class="info-value text-warning">{{ total_worker_pay }}</div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="card other-exp border-0 shadow-sm p-3 h-100">
-                                <div class="info-label">Other Expenses</div>
-                                <div class="info-value h4 mb-0 text-secondary">{{ total_other_exp }}</div>
+                        <div class="col-lg-3 mb-3">
+                            <div class="financial-card rounded shadow-sm" style="border-left-color: #64748b;">
+                                <div class="info-label">Other</div>
+                                <div class="info-value text-secondary">{{ total_other_exp }}</div>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="card total-expenses border-0 shadow-sm p-3 h-100 bg-light">
-                                <div class="info-label">Total Project Expense</div>
-                                <div class="info-value h4 mb-0 text-danger">{{ total_expenses }}</div>
+                        <div class="col-lg-3 mb-3">
+                            <div class="financial-card rounded shadow-sm bg-primary border-0">
+                                <div class="info-label text-white-50">Total Expense</div>
+                                <div class="info-value text-white">{{ total_expenses }}</div>
                             </div>
                         </div>
                     </div>
@@ -157,139 +181,123 @@
             </div>
         </div>
 
-        <!-- SECTION 2: Project Gallery -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white"><i class="fas fa-images text-info mr-2"></i> Project Gallery</div>
-                <div class="card-body">
-                    {% if gallery %}
-                    <div class="gallery-grid">
-                        {% for item in gallery %}
-                        <div class="gallery-item" data-toggle="modal" data-target="#galleryModal{{ item.id }}">
-                            <img src="{{ item.file.url }}" alt="{{ item.name|default:'Project Image' }}">
-                        </div>
-                        <!-- Modal for Large View -->
-                        <div class="modal fade no-print" id="galleryModal{{ item.id }}" tabindex="-1" role="dialog" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-                                <div class="modal-content">
-                                    <div class="modal-header border-0 pb-0">
-                                        <h5 class="modal-title">{{ item.name|default:'Project Image' }}</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    </div>
-                                    <div class="modal-body text-center p-4">
-                                        <img src="{{ item.file.url }}" class="img-fluid rounded shadow">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+        <!-- SECTION 3: Gallery -->
+        {% if gallery %}
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header"><i class="fas fa-images text-info mr-3"></i> Visual Gallery</div>
+                <div class="gallery-grid">
+                    {% for item in gallery %}
+                    <div class="gallery-item shadow-sm" data-toggle="modal" data-target="#modal{{ item.id }}">
+                        <img src="{{ item.file.url }}" alt="Gallery">
                     </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-image fa-3x text-light mb-3"></i>
-                        <p class="text-muted">No images found in project gallery.</p>
-                    </div>
-                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SECTION 4: Workers -->
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header d-flex justify-content-between">
+                    <span><i class="fas fa-user-hard-hat text-warning mr-3"></i> Workforce</span>
+                    <span class="badge bg-light text-dark px-3 py-2 border">{{ workers.count }} Workers</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Designation</th>
+                                <th>Contact</th>
+                                <th>Wages</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pw in workers %}
+                            <tr>
+                                <td class="font-weight-bold">{{ pw.worker_id.name }}</td>
+                                <td><span class="text-muted">{{ pw.worker_id.worker_type_id.name }}</span></td>
+                                <td>{{ pw.worker_id.mobile }}</td>
+                                <td>₹ {{ pw.wages }} <small class="text-muted">/ {{ pw.get_wages_type_display }}</small></td>
+                                <td>
+                                    <span class="badge badge-pill {% if pw.status == 10 %}badge-success{% else %}badge-secondary{% endif %}">
+                                        {{ pw.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted italic">No workers assigned yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- SECTION 3: Project Workers -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-users text-warning mr-2"></i> Project Workers</span>
-                    <span class="badge badge-pill badge-light border">{{ workers.count }} Registered</span>
+        <!-- SECTION 5: Inventory -->
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header d-flex justify-content-between">
+                    <span><i class="fas fa-home text-success mr-3"></i> Unit Inventory</span>
+                    <span class="badge bg-light text-dark px-3 py-2 border">{{ houses.count }} Total Units</span>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="pl-4">Worker Name</th>
-                                    <th>Designation/Role</th>
-                                    <th>Mobile Number</th>
-                                    <th>Wages Type</th>
-                                    <th>Wages Rate</th>
-                                    <th class="pr-4">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for pw in workers %}
-                                <tr>
-                                    <td class="pl-4 font-weight-bold">{{ pw.worker_id.name }}</td>
-                                    <td>{{ pw.worker_id.worker_type_id.name }}</td>
-                                    <td>{{ pw.worker_id.mobile }}</td>
-                                    <td>{{ pw.get_wages_type_display }}</td>
-                                    <td>₹ {{ pw.wages }}</td>
-                                    <td class="pr-4">
-                                        <span class="badge {% if pw.status == 10 %}badge-success{% else %}badge-secondary{% endif %} px-2 py-1">
-                                            {{ pw.get_status_display }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="6" class="text-center py-4 text-muted">No workers assigned to this project.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 4: Project Houses/Flats -->
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-home text-success mr-2"></i> Inventory Status (Houses/Flats)</span>
-                    <span class="badge badge-pill badge-light border">{{ houses.count }} Total Units</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="pl-4">Plot / Unit No</th>
-                                    <th>Type</th>
-                                    <th>Area (Sq.Yd.)</th>
-                                    <th>Base Price</th>
-                                    <th>Current Status</th>
-                                    <th class="pr-4">Buyer Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for house in houses %}
-                                <tr>
-                                    <td class="pl-4 font-weight-bold">#{{ house.plot_no }}</td>
-                                    <td>{{ house.bedrooms }} BHK</td>
-                                    <td>{{ house.area_sqyd }}</td>
-                                    <td class="text-primary font-weight-bold">₹ {{ house.price }}</td>
-                                    <td>
-                                        <span class="badge {% if house.status == 10 %}badge-success{% elif house.status == 30 %}badge-danger{% elif house.status == 20 %}badge-warning{% else %}badge-secondary{% endif %} px-2 py-1">
-                                            {{ house.get_status_display }}
-                                        </span>
-                                    </td>
-                                    <td class="pr-4">
-                                        {% if house.customer_id %}
-                                            <div class="font-weight-bold">{{ house.customer_id.first_name }} {{ house.customer_id.last_name }}</div>
-                                            <div class="small text-muted">@{{ house.customer_id.username }}</div>
-                                        {% else %}
-                                            <span class="text-muted italic">Available for Sale</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="6" class="text-center py-4 text-muted">No houses or flats defined for this project.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Unit #</th>
+                                <th>Config</th>
+                                <th>Area</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Customer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for house in houses %}
+                            <tr>
+                                <td class="font-weight-bold text-primary">#{{ house.plot_no }}</td>
+                                <td>{{ house.bedrooms }} BHK</td>
+                                <td>{{ house.area_sqyd }} <small>Sq.Yd.</small></td>
+                                <td class="font-weight-bold">₹ {{ house.price }}</td>
+                                <td>
+                                    <span class="badge {% if house.status == 10 %}badge-success{% elif house.status == 30 %}badge-danger{% else %}badge-warning{% endif %}">
+                                        {{ house.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if house.customer_id %}
+                                        <div class="small font-weight-bold">{{ house.customer_id.first_name }}</div>
+                                        <div class="x-small text-muted">@{{ house.customer_id.username }}</div>
+                                    {% else %}
+                                        <span class="text-muted small">Available</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center py-5 text-muted italic">No units registered</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal Logic -->
+{% for item in gallery %}
+<div class="modal fade no-print" id="modal{{ item.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-body p-0">
+                <img src="{{ item.file.url }}" class="img-fluid" style="border-radius: 20px;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

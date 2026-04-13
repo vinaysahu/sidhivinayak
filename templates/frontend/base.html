@@ -1,59 +1,61 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Customer Panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Panel | SVED</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-    
-    <style>
-        body {
-            background-color: #f5f6fa;
-        }
-        .sidebar {
-            height: 100vh;
-            background: #2f3640;
-            color: white;
-            padding: 20px;
-        }
-        .sidebar a {
-            color: white;
-            display: block;
-            margin: 10px 0;
-            text-decoration: none;
-        }
-        .sidebar a:hover {
-            background: #353b48;
-            padding-left: 10px;
-        }
-        .content {
-            padding: 20px;
-        }
-    </style>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for better icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
+
+    <!-- Custom Modern Style -->
+    <link rel="stylesheet" href="{% static 'css/modern_style.css' %}">
 </head>
 
 <body>
 
-<div class="container-fluid">
-    <div class="row">
-        
+<div class="container-fluid p-0">
+    <div class="row g-0">
+
         <!-- Sidebar -->
-        <div class="col-2 sidebar">
-            <h4>Customer</h4>
-            <a href="/customer/dashboard">Dashboard</a>
-            <a href="/customer/requests">Request Add Payment</a>
-            <a href="/customer/requests/list">Request Listing</a>
-            <a href="{% url 'logout' %}">Logout</a>
+        <div class="col-lg-2 col-md-3">
+            <div class="sidebar">
+                <h4>SVED Panel</h4>
+                <nav class="nav flex-column mt-4">
+                    <a href="/customer/dashboard" class="nav-link"><i class="fas fa-th-large me-2"></i> Dashboard</a>
+                    <a href="/customer/requests" class="nav-link"><i class="fas fa-plus-circle me-2"></i> Request Add Payment</a>
+                    <a href="/customer/requests/list" class="nav-link"><i class="fas fa-list-ul me-2"></i> Request Listing</a>
+                    <div class="mt-auto pt-4">
+                        <hr class="border-secondary opacity-25">
+                        <a href="{% url 'logout' %}" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+                    </div>
+                </nav>
+            </div>
         </div>
 
         <!-- Content -->
-        <div class="col-10 content">
-            {% block content %}{% endblock %}
+        <div class="col-lg-10 col-md-9 content">
+        <div class="row g-0">
+        <div class="col-lg-10 offset-lg-1 col-md-10 offset-md-1 content">
+            <div class="container py-4 fade-in mr-4 ml-4">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+        </div>
         </div>
 
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

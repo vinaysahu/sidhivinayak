@@ -2,79 +2,94 @@
 
 {% block content %}
 
-<h2>Welcome {{name}}</h2>
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <span class="text-muted small text-uppercase fw-bold">Customer Dashboard</span>
+        <h2 class="mb-0">Welcome, {{name}}</h2>
+    </div>
+</div>
 
-<div class="container">
-<div class="row mt-3 mb-5">
-
-    <div class="col-md-2">
-        <div class="card p-3 shadow">
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="glass-card stat-card h-100">
             <h5>House No</h5>
             <h3>{{house_no}}</h3>
+            <div class="progress mt-3" style="height: 4px;">
+                <div class="progress-bar bg-primary" style="width: 100%"></div>
+            </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card p-3 shadow">
+        <div class="glass-card stat-card h-100">
             <h5>Total Amount</h5>
             <h3>{{total_amount}}</h3>
-            <small>{{total_amount_words}}</small>
+            <small class="d-block mt-2">{{total_amount_words}}</small>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card p-3 shadow">
+        <div class="glass-card stat-card h-100">
             <h5>Paid Amount</h5>
-            <h3>{{paid_amount}}</h3>
-            <small>{{paid_amount_words}}</small>
+            <h3 class="text-success">{{paid_amount}}</h3>
+            <small class="d-block mt-2">{{paid_amount_words}}</small>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card p-3 shadow">
+        <div class="glass-card stat-card h-100" style="border-right: 4px solid var(--primary);">
             <h5>Balance</h5>
-            <h3>{{balance}}</h3>
-            <small>{{balance_words}}</small>
+            <h3 class="text-danger">{{balance}}</h3>
+            <small class="d-block mt-2">{{balance_words}}</small>
         </div>
     </div>
-
 </div>
+
 {% load custom_filters %}
 {% if transactions|length > 0 %}
 
 <div class="row">
-<div class="card shadow">
-<div class="card-header">
-    <h4 class="mb-0">{{name}} Payment Transactions</h4>
-   </div>
-<div class="card-body">
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th scope="col">#</th>
-      <th scope="col">Account</th>
-      <th scope="col">Amount</th>
-      <th scope="col">Paid On</th>
-      <th scope="col">Paid To</th>
-      <th scope="col">Details</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for transaction in transactions %}
-    <tr>
-      <th scope="row">{{ forloop.counter }}</th>
-      <td>{{transaction.payment_type}}</td>
-      <td>{{transaction.amount|indian_currency}} <br/> <small>{{transaction.amount|amount_in_words}}</small></td>
-      <td>{{transaction.paid_on}}</td>
-      <td>{{transaction.paid_to.first_name}}</td>
-      <td>{{transaction.detail}}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-</div>
-</div>
+    <div class="col-12">
+        <div class="glass-card">
+            <div class="card-header bg-transparent border-0 p-4">
+                <h4 class="mb-0">Payment Transactions</h4>
+            </div>
+            <div class="p-0 table-container">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>Account</th>
+                            <th>Amount</th>
+                            <th>Paid On</th>
+                            <th>Paid To</th>
+                            <th class="pe-4">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td class="ps-4 text-muted">{{ forloop.counter }}</td>
+                            <td><span class="badge bg-light text-dark px-3 py-2">{{transaction.payment_type|title}}</span></td>
+                            <td>
+                                <div class="fw-bold">{{transaction.amount|indian_currency}}</div>
+                                <div class="text-muted x-small" style="font-size: 0.75rem;">{{transaction.amount|amount_in_words}}</div>
+                            </td>
+                            <td>{{transaction.paid_on}}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem;">{{transaction.paid_to.first_name.0}}</div>
+                                    {{transaction.paid_to.first_name}}
+                                </div>
+                            </td>
+                            <td class="pe-4 text-muted small">{{transaction.detail}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 

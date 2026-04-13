@@ -1,48 +1,92 @@
-.login-logo img {
-    width: 50% !important;
+/* Modern Admin Enhancements */
+:root {
+    --admin-primary: #6366f1;
+    --admin-bg: #f8fafc;
 }
 
-/* Align Change Form action buttons (Save, Save and Continue, etc.) to the left */
+.login-logo img {
+    width: 40% !important;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+}
+
+/* Better Card Spacing */
+.card {
+    border-radius: 12px !important;
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Align Change Form action buttons */
 .submit-row {
     text-align: left !important;
     display: flex !important;
     justify-content: flex-start !important;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
+    padding: 1.5rem !important;
+    background: #f1f5f9 !important;
+    border-radius: 0 0 12px 12px !important;
 }
 
 .submit-row input, .submit-row a {
     margin: 0 !important;
     float: none !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1.25rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.025em !important;
+    transition: all 0.2s !important;
 }
 
-/* Align Object Tools (Add, View, etc. at the top) to the left */
+.submit-row input[name="_save"] {
+    background-color: var(--admin-primary) !important;
+    border: none !important;
+}
+
+/* Align Object Tools (Add, View, etc.) */
 .object-tools {
     float: left !important;
     margin-bottom: 20px !important;
+    display: flex !important;
+    gap: 10px;
 }
 
 .object-tools li {
     float: left !important;
-    margin-right: 10px !important;
+    margin: 0 !important;
+    list-style: none !important;
+}
+
+.object-tools a {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
 }
 
 /* Jazzmin specific footer buttons */
 .card-footer {
     display: flex !important;
     justify-content: flex-start !important;
-    gap: 10px;
+    gap: 12px;
+    background: transparent !important;
 }
 
-/* Align change list "Add" button and actions to the left */
-#content-main .object-tools {
-    width: 100%;
-    display: flex !important;
-    justify-content: flex-start !important;
-    padding: 0;
-    margin: 10px 0 !important;
+/* Sidebar Hover Effects */
+.nav-sidebar .nav-link {
+    transition: all 0.2s ease;
 }
 
-#content-main .object-tools li {
-    list-style: none;
+.nav-sidebar .nav-link:hover {
+    transform: translateX(4px);
+}
+
+/* Table Enhancements */
+.table thead th {
+    border-top: none !important;
+    background-color: #f8fafc !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    font-size: 0.7rem !important;
 }

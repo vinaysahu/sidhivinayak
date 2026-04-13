@@ -1,67 +1,139 @@
 {% extends 'frontend/base.html' %}
 
 {% block content %}
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .flatpickr-calendar {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        border-radius: 16px !important;
+        padding: 5px;
+    }
+    .flatpickr-day.selected {
+        background: #6366f1 !important;
+        border-color: #6366f1 !important;
+    }
+    .flatpickr-months .flatpickr-month {
+        color: #1e293b !important;
+        fill: #1e293b !important;
+    }
+</style>
 
-<div class="container mt-4">
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <span class="text-muted small text-uppercase fw-bold">Action Center</span>
+        <h2 class="mb-0">New Payment Request</h2>
+    </div>
+</div>
+
+<div class="container-fluid px-0">
 {% if messages %}
     {% for message in messages %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-success border-0 shadow-sm fade show fade-in d-flex align-items-center" role="alert" style="background: rgba(16, 185, 129, 0.1); color: #065f46;">
+            <i class="fas fa-check-circle me-2"></i>
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
         </div>
     {% endfor %}
 {% endif %}
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+
+    <div class="row justify-content-start">
+        <div class="col-lg-7 col-md-10">
             
-            <div class="card shadow">
-                <div class="card-header">
-                    <h4 class="mb-0">Customer Request Form</h4>
+            <div class="glass-card overflow-hidden">
+                <div class="card-header bg-transparent border-0 p-4 pb-0">
+                    <h4 class="mb-0 text-primary"><i class="fas fa-file-invoice me-2"></i>Request Details</h4>
+                    <p class="text-muted small mt-2">Fill in the details below to submit a new payment verification request.</p>
                 </div>
 
-                <div class="card-body">
+                <div class="card-body p-4">
                     <form method="post">
                         {% csrf_token %}
 
                         {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
+                            <div class="alert alert-danger border-0 small">
                                 {% for error in form.non_field_errors %}
-                                    <div>{{ error }}</div>
+                                    <div class="d-flex align-items-center"><i class="fas fa-exclamation-triangle me-2"></i> {{ error }}</div>
                                 {% endfor %}
                             </div>
                         {% endif %}
 
-                        {% for field in form %}
-                            <div class="mb-3">
-                                <label for="{{ field.id_for_label }}" class="form-label">
-                                    {{ field.label }}
-                                </label>
+                        <div class="row">
+                            {% for field in form %}
+                                <div class="col-12 mb-4">
+                                    <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-uppercase" style="letter-spacing: 0.5px; color: #64748b;">
+                                        {{ field.label }}
+                                    </label>
 
-                                {{ field }}
+                                    {{ field }}
 
-                                {% if field.help_text %}
-                                    <small class="text-muted">{{ field.help_text }}</small>
-                                {% endif %}
+                                    {% if field.help_text %}
+                                        <div class="form-text small text-muted mt-1">{{ field.help_text }}</div>
+                                    {% endif %}
 
-                                {% if field.errors %}
-                                    <div class="text-danger mt-1">
-                                        {% for error in field.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in field.errors %}
+                                                <div class="d-flex align-items-center"><i class="fas fa-times-circle me-1"></i> {{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
 
-                        <button type="submit" class="btn btn-primary">
-                            Submit
-                        </button>
+                        <div class="mt-2">
+                            <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Request
+                            </button>
+                            <a href="/customer/dashboard" class="btn btn-link text-muted text-decoration-none ms-3 small">Cancel</a>
+                        </div>
                     </form>
                 </div>
             </div>
 
         </div>
+        
+        <div class="col-lg-5 d-none d-lg-block">
+            <div class="glass-card p-4 h-100" style="background: rgba(99, 102, 241, 0.03);">
+                <h5 class="text-primary mb-3">Submission Guide</h5>
+                <ul class="list-unstyled small text-muted">
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="fas fa-info-circle text-primary me-2 mt-1"></i>
+                        <span>Ensure the amount matches your transaction receipt exactly.</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="fas fa-info-circle text-primary me-2 mt-1"></i>
+                        <span>Double-check the payment date before submitting.</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="fas fa-info-circle text-primary me-2 mt-1"></i>
+                        <span>Requests are typically processed within 24-48 business hours.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        flatpickr("input[name='paid_on']", {
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "F j, Y",
+            allowInput: true,
+            disableMobile: "true",
+            animate: true
+        });
+    });
+</script>
 {% endblock %}
