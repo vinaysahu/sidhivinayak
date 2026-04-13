@@ -28,8 +28,8 @@ class ProjectWorkers(models.Model):
         (WAGES_LUM_SUM, "Lum Sum"),
     )
 
-    project_id = models.ForeignKey(Projects, on_delete=models.CASCADE, verbose_name="Project")
-    worker_id = models.ForeignKey(Workers, on_delete=models.CASCADE, verbose_name="Amenity")
+    project_id = models.ForeignKey(Projects, on_delete=models.CASCADE, verbose_name="Project", related_name="project_workers")
+    worker_id = models.ForeignKey(Workers, on_delete=models.CASCADE, verbose_name="Worker", related_name="project_workers")
     wages_type = models.SmallIntegerField(choices=WAGES_CHOICES, default=WAGES_PER_DAY)
     wages = models.IntegerField()
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=STATUS_ACTIVE)

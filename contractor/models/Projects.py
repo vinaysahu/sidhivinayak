@@ -13,10 +13,10 @@ class Projects(models.Model):
     STATUS_UPCOMING = 40
 
     STATUS_CHOICES = (
-        (STATUS_ACTIVE, "Under Constraction"),
+        (STATUS_ACTIVE, "Under Construction"),
         (STATUS_INACTIVE, "Completed"),
         (STATUS_DELETED, "Hold"),
-        (STATUS_UPCOMING, "Up Coming"),
+        (STATUS_UPCOMING, "Upcoming"),
     )
 
     PROJECT_TYPES_HOUSE = 10
@@ -30,7 +30,7 @@ class Projects(models.Model):
     )
 
     name = models.CharField(max_length=255)
-    project_type = models.SmallIntegerField(choices=PROJECT_TYPES, default="mixed")
+    project_type = models.SmallIntegerField(choices=PROJECT_TYPES, default=PROJECT_TYPES_MIXED)
 
     address = models.TextField(blank=True)
     landmark = models.CharField(max_length=255, blank=True)

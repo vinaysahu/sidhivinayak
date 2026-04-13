@@ -17,8 +17,5 @@ def update_ledger_balance(sender, instance, **kwargs):
         payment_type='debited'
     ).aggregate(total=Sum('amount'))['total'] or 0
 
-    ledger.balance = ledger.amount - credited 
-    ledger.save()
-
-    ledger.balance = ledger.balance + debited
-    ledger.save()
+    ledger.balance = ledger.amount - credited + debited
+    ledger.save(update_fields=['balance'])
