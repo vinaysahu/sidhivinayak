@@ -10,24 +10,31 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+import dj_database_url
+from dotenv import load_dotenv
 from django.forms.renderers import TemplatesSetting
+
+from django.contrib import admin
+admin.ModelAdmin.save_on_top = True
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-v%(0_px4^qfwm5v*o^^i(_7-p!chg89u8*qfx(g317&bi!&zb%'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['13.235.165.205','localhost','127.0.0.1']
+ALLOWED_HOSTS = ['13.235.165.205', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -64,68 +71,101 @@ JAZZMIN_SETTINGS = {
     # Optional
     "site_brand": "SVED",
     "custom_css": "css/admin_custom.css",
+
+    # Sidebar Icon mapping
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-user-shield",
+        
+        # Accounts
+        "accounts.UserLedger": "fas fa-book",
+        "accounts.UserLedgerTransaction": "fas fa-exchange-alt",
+        
+        # Projects
+        "projects.Projects": "fas fa-building",
+        "projects.ProjectHouses": "fas fa-home",
+        "projects.ProjectWorkerAttendances": "fas fa-calendar-check",
+        "projects.ProjectMaterials": "fas fa-toolbox",
+        "projects.UserProjectPermissions": "fas fa-user-lock",
+        "projects.ProjectSupplierLedger": "fas fa-truck-loading",
+        "projects.ProjectLedger": "fas fa-file-invoice-rupee",
+        
+        # Contractor
+        "contractor.Projects": "fas fa-construction",
+        "contractor.ProjectWorkerAttendances": "fas fa-user-check",
+        
+        # Customers
+        "customers.Customers": "fas fa-user-tie",
+        "customers.CustomerEnquiry": "fas fa-phone-alt",
+        "customers.PropertySellRequest": "fas fa-city",
+        "customers.CustomerLedger": "fas fa-book-open",
+        "customers.CustomerLedgerTransaction": "fas fa-money-bill-wave",
+        "customers.CustomerRequestTransaction": "fas fa-hand-holding-usd",
+        
+        # Workers
+        "workers.Workers": "fas fa-hard-hat",
+        "workers.WorkerTypes": "fas fa-id-badge",
+        
+        # Globals
+        "globals.Cities": "fas fa-map-marker-alt",
+        "globals.Contacts": "fas fa-address-book",
+        "globals.Countries": "fas fa-flag",
+        "globals.Regions": "fas fa-map",
+        "globals.States": "fas fa-map-signs",
+        "globals.Suppliers": "fas fa-store",
+        "globals.Vehicles": "fas fa-truck",
+        "globals.Localities": "fas fa-street-view",
+        "globals.Amenities": "fas fa-swimming-pool",
+        "globals.Materials": "fas fa-cubes",
+    },
+    
+    # Default icons for apps and models that don't have one
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+    
+    # Sidebar order
+    "order_with_respect_to": [
+        "auth",
+        "accounts",
+        "projects",
+        "contractor",
+        "customers",
+        "workers",
+        "globals",
+    ],
 }
 
 JAZZMIN_UI_TWEAKS = {
-
     "navbar_small_text": False,
-
     "footer_small_text": False,
-
     "body_small_text": False,
-
     "brand_small_text": False,
-
-    "brand_colour": False,
-
-    "accent": "accent-primary",
-
-    "navbar": "navbar-white navbar-light",
-
+    "brand_colour": "navbar-success",
+    "accent": "accent-teal",
+    "navbar": "navbar-dark",
     "no_navbar_border": False,
-
-    "navbar_fixed": False,
-
+    "navbar_fixed": True,
     "layout_boxed": False,
-
     "footer_fixed": False,
-
-    "sidebar_fixed": False,
-
-    "sidebar": "sidebar-dark-primary",
-
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-success",
     "sidebar_nav_small_text": False,
-
     "sidebar_disable_expand": False,
-
     "sidebar_nav_child_indent": True,
-
     "sidebar_nav_compact_style": False,
-
     "sidebar_nav_legacy_style": False,
-
     "sidebar_nav_flat_style": False,
-
     "theme": "default",
-
     "dark_mode_theme": None,
-
     "button_classes": {
-
         "primary": "btn-primary",
-
         "secondary": "btn-secondary",
-
         "info": "btn-info",
-
         "warning": "btn-warning",
-
         "danger": "btn-danger",
-
         "success": "btn-success"
-
     }
-
 }
 
 MIDDLEWARE = [
@@ -164,13 +204,11 @@ WSGI_APPLICATION = 'sidhivinayak.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 30,
-        }
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 

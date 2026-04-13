@@ -1,0 +1,52 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify jazzmin %}
+
+{% block content %}
+    <style>
+        .custom-btn-group {
+            display: inline-flex;
+            gap: 10px;
+            margin-right: 10px;
+        }
+        .btn-add-house { background-color: #28a745 !important; border-color: #28a745 !important; color: white !important; }
+        .btn-view-details { background-color: #007bff !important; border-color: #007bff !important; color: white !important; }
+        .btn-worker-attendance { background-color: #fd7e14 !important; border-color: #fd7e14 !important; color: white !important; }
+        .btn-custom-admin {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+            text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+        .btn-custom-admin:hover { opacity: 0.9; color: white !important; }
+    </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var customButtons = `
+                <div class="custom-btn-group">
+                    <a href="{{ add_house_url }}" class="btn btn-custom-admin btn-add-house">
+                        <i class="fas fa-plus"></i> Add House
+                    </a>
+                    <a href="{{ view_details_url }}" class="btn btn-custom-admin btn-view-details">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                    <a href="{{ worker_attendance_url }}" class="btn btn-custom-admin btn-worker-attendance">
+                        <i class="fas fa-users"></i> Worker Attendances
+                    </a>
+                </div>
+            `;
+            
+            // Inject into Jazzmin's d-flex container inside submit-row
+            var rows = document.querySelectorAll('.submit-row-top div.d-flex, .submit-row-bottom div.d-flex');
+            rows.forEach(function(row) {
+                row.insertAdjacentHTML('afterbegin', customButtons);
+            });
+        });
+    </script>
+    {{ block.super }}
+{% endblock %}

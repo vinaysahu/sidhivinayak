@@ -95,6 +95,7 @@ class CustomerLedgerRequestInline(admin.TabularInline):
       
 class CustomerLedgerAdmin(admin.ModelAdmin):
 
+    list_select_related = True
     list_display = ['customer_id', 'project_id', 'project_house_id', 'formatted_amount', 'formatted_balance', 'paid_amount' ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')
 

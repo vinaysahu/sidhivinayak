@@ -1,14 +1,13 @@
+import os
 from langchain_core.messages import HumanMessage
 import re
 import json
-from dotenv import load_dotenv
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-
-load_dotenv()
 
 llm = HuggingFaceEndpoint(
     repo_id="deepseek-ai/DeepSeek-R1-0528",
     task="text-generation",
+    huggingfacehub_api_token=os.getenv("HUGGINGFACE_API_TOKEN")
 )
 
 model = ChatHuggingFace(llm=llm)
@@ -70,12 +69,18 @@ bill_details = {
 
 }
 
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
 def extract_bill_data(raw_text):
-
-    structured_model = model.with_structured_output(bill_details)
-
-    res = structured_model.invoke(raw_text)
-
-    return res
+    try:
+        structured_model = model.with_structured_output(bill_details)
+        res = structured_model.invoke(raw_text)
+        return res
+    except Exception as e:
+        logger.error(f"Error extracting bill data from HuggingFace API: {str(e)}", exc_info=True)
+        return None
 
     

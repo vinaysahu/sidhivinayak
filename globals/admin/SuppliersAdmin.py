@@ -6,6 +6,7 @@ from common.filters.adminModelFilter import TableForiegnKeyListFilter
 
 class SuppliersAdmin(admin.ModelAdmin):
 
+    list_select_related = True
     list_display = ["shop_name", "brand_id", "show_image", "first_name", "last_name", "mobile", "status", "created_at", "updated_at" ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')       # Remove from FORM
 

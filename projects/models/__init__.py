@@ -5,3 +5,6 @@ from .ProjectWorkers import *
 from .ProjectWorkerAttendances import *
 from .ProjectMaterials import *
 from .UserProjectPermissions import *
+from .ProjectSupplierLedger import *
+from .ProjectSupplierPayment import *
+from .ProjectLedger import *

@@ -4,8 +4,8 @@ django-debug-toolbar
 Pillow
 pytesseract
 langchain
-dotenv
+python-dotenv
+dj-database-url
 langchain_community
 langchain_huggingface
-
 num2words

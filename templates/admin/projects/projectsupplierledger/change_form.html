@@ -1,0 +1,45 @@
+{% extends "admin/change_form.html" %}
+
+{% block form_top %}
+    {% if original %}
+        <div class="summary-container" style="margin-bottom: 20px; padding: 15px; border: 2px solid #79aec8; border-radius: 8px; background-color: #f8f9fa;">
+            <h3 style="margin-top: 0; color: #79aec8; font-size: 1.1em;">Supplier Summary (Top)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <strong>Total Amount:</strong> <br>
+                    <span class="live-amount" style="font-size: 1.2em; color: #2e7d32; font-weight: bold;">{{ original.total_amount_display|safe }}</span>
+                </div>
+                <div>
+                    <strong>Paid Amount:</strong> <br>
+                    <span class="live-paid-amount" style="font-size: 1.2em; color: #1976d2; font-weight: bold;">{{ original.paid_amount_display|safe }}</span>
+                </div>
+                <div>
+                    <strong>Balance:</strong> <br>
+                    <span class="live-balance" style="font-size: 1.2em; color: #d32f2f; font-weight: bold;">{{ original.balance_display|safe }}</span>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block after_field_sets %}
+    {% if original %}
+        <div class="summary-container" style="margin-top: 20px; padding: 15px; border: 2px solid #79aec8; border-radius: 8px; background-color: #f8f9fa;">
+            <h3 style="margin-top: 0; color: #79aec8; font-size: 1.1em;">Supplier Summary (Bottom)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <strong>Total Amount:</strong> <br>
+                    <span class="live-amount" style="font-size: 1.2em; color: #2e7d32; font-weight: bold;">{{ original.total_amount_display|safe }}</span>
+                </div>
+                <div>
+                    <strong>Paid Amount:</strong> <br>
+                    <span class="live-paid-amount" style="font-size: 1.2em; color: #1976d2; font-weight: bold;">{{ original.paid_amount_display|safe }}</span>
+                </div>
+                <div>
+                    <strong>Balance:</strong> <br>
+                    <span class="live-balance" style="font-size: 1.2em; color: #d32f2f; font-weight: bold;">{{ original.balance_display|safe }}</span>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

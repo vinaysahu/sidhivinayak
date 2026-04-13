@@ -32,7 +32,7 @@ class Projects(models.Model):
 
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, blank=True)
-    project_type = models.SmallIntegerField(choices=PROJECT_TYPES, default="mixed")
+    project_type = models.SmallIntegerField(choices=PROJECT_TYPES, default=PROJECT_TYPES_MIXED)
 
     country_id = models.ForeignKey(Countries, on_delete=models.CASCADE, related_name="country", blank=True, null=True, verbose_name="Country")
     state_id = models.ForeignKey(States, on_delete=models.CASCADE, related_name="state", blank=True, null=True, verbose_name="State")
@@ -69,7 +69,13 @@ class Projects(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            while Projects.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
 
     def __str__(self):

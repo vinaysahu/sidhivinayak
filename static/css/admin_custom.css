@@ -1,3 +1,48 @@
 .login-logo img {
     width: 50% !important;
 }
+
+/* Align Change Form action buttons (Save, Save and Continue, etc.) to the left */
+.submit-row {
+    text-align: left !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.submit-row input, .submit-row a {
+    margin: 0 !important;
+    float: none !important;
+}
+
+/* Align Object Tools (Add, View, etc. at the top) to the left */
+.object-tools {
+    float: left !important;
+    margin-bottom: 20px !important;
+}
+
+.object-tools li {
+    float: left !important;
+    margin-right: 10px !important;
+}
+
+/* Jazzmin specific footer buttons */
+.card-footer {
+    display: flex !important;
+    justify-content: flex-start !important;
+    gap: 10px;
+}
+
+/* Align change list "Add" button and actions to the left */
+#content-main .object-tools {
+    width: 100%;
+    display: flex !important;
+    justify-content: flex-start !important;
+    padding: 0;
+    margin: 10px 0 !important;
+}
+
+#content-main .object-tools li {
+    list-style: none;
+}

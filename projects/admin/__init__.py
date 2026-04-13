@@ -4,3 +4,5 @@ from .ProjectHousesAdmin import *
 from .ProjectWorkerAttendancesAdmin import *
 from .ProjectMaterialsAdmin import *
 from .UserProjectPermissionsAdmin import *
+from .ProjectSupplierLedgerAdmin import *
+from .ProjectLedgerAdmin import *

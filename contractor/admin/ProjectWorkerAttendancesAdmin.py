@@ -10,6 +10,7 @@ from django.utils import timezone
 
 class ProjectWorkerAttendancesAdmin(admin.ModelAdmin):
 
+    list_select_related = True
     change_form_template = "admin/projects/workerAttendance/change_form.html"
 
     list_display = ["get_project_name", "total_amount", "paid_amount", "remaining_amount", "working_date" ] # grid mae kaisa view

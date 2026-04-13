@@ -5,6 +5,7 @@ from common.filters.adminModelFilter import TableForiegnKeyListFilter
 
 class CitiesAdmin(admin.ModelAdmin):
 
+    list_select_related = True
     list_display = ["name", "state_id", "created_at", "updated_at" ] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')       # Remove from FORM
 

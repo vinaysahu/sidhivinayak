@@ -1,0 +1,52 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block form_top %}
+    {% if original %}
+        <div class="summary-container" style="margin-bottom: 20px; padding: 15px; border: 2px solid #79aec8; border-radius: 8px; background-color: #f8f9fa;">
+            <h3 style="margin-top: 0; color: #79aec8; font-size: 1.1em;">Currency Summary (Top)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <strong>Amount:</strong> <br>
+                    <span class="live-amount" style="font-size: 1.2em; color: #2e7d32; font-weight: bold;">{{ original.amount_display }}</span><br>
+                    <small class="live-amount-words" style="color: #666;">{{ original.amount_words }}</small>
+                </div>
+                <div>
+                    <strong>Paid Amount:</strong> <br>
+                    <span class="live-paid-amount" style="font-size: 1.2em; color: #1976d2; font-weight: bold;">{{ original.paid_amount_display }}</span><br>
+                    <small class="live-paid-amount-words" style="color: #666;">{{ original.paid_amount_words }}</small>
+                </div>
+                <div>
+                    <strong>Balance:</strong> <br>
+                    <span class="live-balance" style="font-size: 1.2em; color: #d32f2f; font-weight: bold;">{{ original.balance_display }}</span><br>
+                    <small class="live-balance-words" style="color: #666;">{{ original.balance_words }}</small>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block after_field_sets %}
+    {% if original %}
+        <div class="summary-container" style="margin-top: 20px; padding: 15px; border: 2px solid #79aec8; border-radius: 8px; background-color: #f8f9fa;">
+            <h3 style="margin-top: 0; color: #79aec8; font-size: 1.1em;">Currency Summary (Bottom)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <strong>Amount:</strong> <br>
+                    <span class="live-amount" style="font-size: 1.2em; color: #2e7d32; font-weight: bold;">{{ original.amount_display }}</span><br>
+                    <small class="live-amount-words" style="color: #666;">{{ original.amount_words }}</small>
+                </div>
+                <div>
+                    <strong>Paid Amount:</strong> <br>
+                    <span class="live-paid-amount" style="font-size: 1.2em; color: #1976d2; font-weight: bold;">{{ original.paid_amount_display }}</span><br>
+                    <small class="live-paid-amount-words" style="color: #666;">{{ original.paid_amount_words }}</small>
+                </div>
+                <div>
+                    <strong>Balance:</strong> <br>
+                    <span class="live-balance" style="font-size: 1.2em; color: #d32f2f; font-weight: bold;">{{ original.balance_display }}</span><br>
+                    <small class="live-balance-words" style="color: #666;">{{ original.balance_words }}</small>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

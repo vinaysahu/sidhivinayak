@@ -27,7 +27,7 @@ def TableForiegnKeyListFilter(field_title, field_name, parent_field_name, table)
         parameter_name = field_name
 
         def lookups(self, request, model_admin):
-            tableDatas = table.objects.all()
+            tableDatas = table.objects.only('id', parent_field_name).all()
             return [(tableData.id, getattr(tableData, parent_field_name)) for tableData in tableDatas]
 
         def queryset(self, request, queryset):
@@ -48,7 +48,7 @@ def customDropdownFilterForAnotherTable(title, parameter_name, field_name, table
         raise ValueError("All parameters are required")
 
     def lookups(self, request, model_admin):
-        tableDatas = table.objects.all()
+        tableDatas = table.objects.only('id', field_name).all()
         return [(u.id, getattr(u, field_name)) for u in tableDatas]
 
     def queryset(self, request, queryset):
@@ -90,9 +90,9 @@ def TableForiegnKeyListHasPermissionFilter(field_title, field_name, parent_field
 
                 tableDatas = table.objects.filter(
                     id__in=allowed_project_ids
-                ).all()
+                ).only('id', parent_field_name).all()
             else:
-                tableDatas = table.objects.all()
+                tableDatas = table.objects.only('id', parent_field_name).all()
             return [(tableData.id, getattr(tableData, parent_field_name)) for tableData in tableDatas]
 
         def queryset(self, request, queryset):

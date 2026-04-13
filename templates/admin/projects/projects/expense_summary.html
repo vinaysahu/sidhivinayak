@@ -1,0 +1,25 @@
+<div style="padding: 20px; border: 2px solid #79aec8; border-radius: 8px; background-color: #f8f9fa; max-width: 500px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <h3 style="margin-top: 0; color: #79aec8; border-bottom: 2px solid #79aec8; padding-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Project Expense Summary</h3>
+    
+    <div style="margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-weight: 600; color: #555;">Supplier Payments:</span>
+            <span style="font-weight: bold; color: #2e7d32;">{{ supplier_pay }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-weight: 600; color: #555;">Worker Payments:</span>
+            <span style="font-weight: bold; color: #2e7d32;">{{ worker_pay }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #79aec8;">
+            <span style="font-weight: bold; color: #333; font-size: 1.1em;">Total Expenses:</span>
+            <span style="font-weight: 800; color: #000; font-size: 1.1em;">{{ total_exp }}</span>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 15px; padding: 10px; background-color: #ffebee; border-radius: 4px;">
+            <span style="font-weight: 600; color: #c62828;">Supplier Pending:</span>
+            <span style="font-weight: bold; color: #c62828;">{{ supplier_pending }}</span>
+        </div>
+    </div>
+</div>

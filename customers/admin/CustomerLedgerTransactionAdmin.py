@@ -25,6 +25,7 @@ class CustomerFilter(admin.SimpleListFilter):
       
 class CustomerLedgerTransactionAdmin(admin.ModelAdmin):
 
+    list_select_related = True
     form = CustomerLedgerTransactionForm
 
     list_display = ['paid_on', 'paid_to', 'payment_type','formatted_amount','detail' ] # grid mae kaisa view

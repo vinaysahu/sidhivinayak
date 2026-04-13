@@ -44,6 +44,7 @@ class ProjectWorkersInline(admin.TabularInline):
 
 class ProjectsAdmin(admin.ModelAdmin):
 
+    list_select_related = True
     list_display = ["name", "project_type", "address", "area_sqyd", "status"] # grid mae kaisa view
     exclude = ('created_at', 'updated_at')       # Remove from FORM
 
