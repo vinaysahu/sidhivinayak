@@ -63,7 +63,7 @@
                             <th>Amount</th>
                             <th>Paid On</th>
                             <th>Paid To</th>
-                            <th class="pe-4">Details</th>
+                            {% comment %} <th class="pe-4">Details</th> {% endcomment %}
                         </tr>
                     </thead>
                     <tbody>
@@ -82,7 +82,7 @@
                                     {{transaction.paid_to.first_name}}
                                 </div>
                             </td>
-                            <td class="pe-4 text-muted small">{{transaction.detail}}</td>
+                            {% comment %} <td class="pe-4 text-muted small">{{transaction.detail}}</td> {% endcomment %}
                         </tr>
                         {% endfor %}
                     </tbody>
