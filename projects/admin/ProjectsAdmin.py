@@ -60,6 +60,80 @@ class ProjectMaterialsInline(admin.TabularInline):
     def has_change_permission(self, request, obj=None): return False
     def has_delete_permission(self, request, obj=None): return True
 
+class ProjectSupplierLedgerInline(admin.TabularInline):
+    model = ProjectSupplierLedger
+    extra = 0
+    can_delete = False
+    show_change_link = False
+    verbose_name = 'Supplier Ledger'
+    verbose_name_plural = 'Project Supplier Ledger'
+
+    fields = [
+        'supplier',
+        'item_description',
+        'formatted_total',
+        'formatted_paid',
+        'formatted_balance',
+        'balance_status',
+        'edit_action',
+    ]
+
+    readonly_fields = [
+        'supplier',
+        'item_description',
+        'formatted_total',
+        'formatted_paid',
+        'formatted_balance',
+        'balance_status',
+        'edit_action',
+    ]
+
+    def formatted_total(self, obj):
+        return format_indian_currency(obj.total_amount)
+    formatted_total.short_description = "Total"
+
+    def formatted_paid(self, obj):
+        return format_indian_currency(obj.paid_amount)
+    formatted_paid.short_description = "Paid"
+
+    def formatted_balance(self, obj):
+        balance = obj.balance or 0
+        color = "red" if balance > 0 else "green"
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, format_indian_currency(balance))
+    formatted_balance.short_description = "Balance"
+
+    def balance_status(self, obj):
+        balance = obj.balance or 0
+        if balance > 0:
+            return format_html('<span style="color: red; font-weight: bold;">🔴 Baaki hai</span>')
+        return format_html('<span style="color: green; font-weight: bold;">🟢 Paid</span>')
+    balance_status.short_description = "Status"
+
+    def edit_action(self, obj):
+        if obj and obj.pk:
+            url = reverse('admin:projects_projectsupplierledger_change', args=[obj.pk])
+            return format_html(
+                '<a href="{}" class="button" '
+                'style="background:#1a56db;color:white;padding:5px 12px;'
+                'border-radius:4px;text-decoration:none;font-size:12px;'
+                'white-space:nowrap;">✏ Edit</a>',
+                url
+            )
+        return '-'
+    edit_action.short_description = 'Action'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('supplier', 'project')
+
 class ProjectWorkersInline(admin.TabularInline):
     model = ProjectWorkers
     extra = 0
@@ -108,7 +182,7 @@ class ProjectsAdmin(admin.ModelAdmin):
     list_display = ["name", "project_type", "locality_id", "address", "area_sqyd", "status", "get_action_list" ]
     exclude = ('created_at', 'updated_at')
 
-    inlines = [ProjectAmenitiesInline, ProjectMediaInline, ProjectWorkersInline, ProjectHouseInline, ProjectMaterialsInline]
+    inlines = [ProjectAmenitiesInline, ProjectMediaInline, ProjectWorkersInline, ProjectHouseInline, ProjectSupplierLedgerInline]
 
     search_fields = ["name"]
     list_filter = ["status", "project_type"]

@@ -11,6 +11,7 @@ from ..utils import format_indian_currency, amount_to_words
 from django.utils.html import format_html
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import weasyprint
 
 class UserLedgerTransactionsInline(admin.TabularInline):
@@ -20,6 +21,7 @@ class UserLedgerTransactionsInline(admin.TabularInline):
     show_change_link = True
     verbose_name = "User Ledger Transaction"
     verbose_name_plural = "User Ledger Transactions"
+    template = 'admin/accounts/user_ledger/tabular_paginated.html'
     
     readonly_fields = [
         'amount_display', 'amount_words', 
@@ -32,6 +34,27 @@ class UserLedgerTransactionsInline(admin.TabularInline):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.order_by(F('paid_on').asc(nulls_last=True))
+
+    def get_formset(self, request, obj=None, **kwargs):
+        FormSet = super().get_formset(request, obj, **kwargs)
+        
+        class PaginatedInlineFormSet(FormSet):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                # Get the base queryset and paginate it
+                qs = self.queryset
+                paginator = Paginator(qs, 15)  # 15 transactions per page
+                page_num = request.GET.get('trans_page', 1)
+                
+                try:
+                    self.page_obj = paginator.page(page_num)
+                except (PageNotAnInteger, EmptyPage):
+                    self.page_obj = paginator.page(1)
+                
+                # Replace the queryset with the sliced one for the current page
+                self.queryset = self.page_obj.object_list
+
+        return PaginatedInlineFormSet
 
     def amount_display(self, obj):
         if obj.id:
