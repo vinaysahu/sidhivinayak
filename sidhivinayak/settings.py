@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "projects.apps.ProjectsConfig",
     "workers.apps.WorkersConfig",
     "globals.apps.GlobalsConfig",
+    "common",
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
