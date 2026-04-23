@@ -16,6 +16,10 @@ class CustomerTransactionRequestAdmin(admin.ModelAdmin):
 
     list_filter = [customDropdownFilterForAnotherTable("Customers", "customers", "first_name", Customers, ["customer_ledger__customer_id"]  )]
     
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+    
     def formatted_amount(self, obj):
         return format_indian_currency(obj.amount)
     formatted_amount.short_description = "Amount"

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DejaVu Sans', Arial, sans-serif;
+    font-size: 12px;
+    color: #1a1a1a;
+    padding: 30px 36px;
+    background: #fff;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #1a56db;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .company-name {
+    font-size: 22px;
+    font-weight: bold;
+    color: #1a56db;
+    letter-spacing: 0.5px;
+  }
+  .company-sub {
+    font-size: 11px;
+    color: #555;
+    margin-top: 3px;
+  }
+  .doc-title {
+    text-align: right;
+  }
+  .doc-title h2 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #1a1a1a;
+  }
+  .doc-title p {
+    font-size: 11px;
+    color: #666;
+    margin-top: 3px;
+  }
+
+  /* ── INFO SECTION ── */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 20px;
+  }
+  .info-box {
+    flex: 1;
+    background: #f8faff;
+    border: 1px solid #dde6f7;
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .info-box .label {
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .info-box .value {
+    font-size: 13px;
+    font-weight: bold;
+    color: #1a1a1a;
+  }
+  .info-box .value.big {
+    font-size: 16px;
+    color: #1a56db;
+  }
+
+  /* ── SUMMARY BOXES ── */
+  .summary-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .summary-box {
+    flex: 1;
+    border-radius: 6px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .summary-box .s-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+  }
+  .summary-box .s-value {
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .box-blue   { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+  .box-green  { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .box-red    { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; }
+
+  /* ── TABLE ── */
+  .section-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #1a56db;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #dde6f7;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+  }
+  thead tr {
+    background: #1a56db;
+    color: #fff;
+  }
+  thead th {
+    padding: 9px 10px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  tbody tr:nth-child(even) { background: #f5f8ff; }
+  tbody tr:nth-child(odd)  { background: #ffffff; }
+  tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e8edf7;
+    font-size: 11px;
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .text-right  { text-align: right; }
+  .text-center { text-align: center; }
+  .font-bold   { font-weight: bold; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: bold;
+  }
+  .badge-cash    { background: #dcfce7; color: #166534; }
+  .badge-online  { background: #dbeafe; color: #1d4ed8; }
+  .badge-cheque  { background: #fef9c3; color: #854d0e; }
+  .badge-default { background: #f3f4f6; color: #374151; }
+
+  /* ── AMOUNT IN WORDS ── */
+  .amount-words {
+    background: #fafbff;
+    border: 1px dashed #c7d7f5;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #444;
+    margin-bottom: 24px;
+  }
+  .amount-words strong { color: #1a56db; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 28px;
+    color: #aaa;
+    font-size: 12px;
+    background: #fafafa;
+    border: 1px dashed #ddd;
+    border-radius: 6px;
+    margin-bottom: 24px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid #dde6f7;
+    margin-top: 10px;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #aaa;
+  }
+  .logo{
+    width:150px;
+    height:90px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <div class="company-name"><img class="logo" src="/static/assets/images/logo_pdf.jpg" /></div>
+    {% comment %} <div class="company-sub">Transaction Statement</div> {% endcomment %}
+  </div>
+  <div class="doc-title">
+    
+    {% if ledger.customer_id.first_name %}
+        <h2>{{ ledger.customer_id.first_name }} {{ ledger.customer_id.last_name }} Ledger</h2>
+    {% else %}
+        <h2>{{ ledger.customer_id }}</h2>
+    {% endif %}
+    <p>Generated: {% now "d M Y, h:i A" %}</p>
+  </div>
+</div>
+
+<!-- ══ LEDGER INFO ══════════════════════════════════════════════════ -->
+<div class="info-row">
+  <div class="info-box">
+    <div class="label">Customer</div>
+    {% if ledger.customer_id.first_name %}
+        <div class="value">{{ ledger.customer_id.first_name }} {{ ledger.customer_id.last_name }}</div>
+    {% else %}
+        <div class="value">{{ ledger.customer_id }}</div>
+    {% endif %}
+  </div>
+  <div class="info-box">
+    <div class="label">Project</div>
+    <div class="value">{{ ledger.project_id }}</div>
+  </div>
+  {% if ledger.project_house_id %}
+  <div class="info-box">
+    <div class="label">House / Unit</div>
+    <div class="value">{{ ledger.project_house_id }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ SUMMARY BOXES ═══════════════════════════════════════════════ -->
+<div class="summary-row">
+  <div class="summary-box box-blue">
+    <div class="s-label">Total Amount</div>
+    <div class="s-value">{{ formatted_amount }}</div>
+  </div>
+  <div class="summary-box box-green">
+    <div class="s-label">Paid Amount</div>
+    <div class="s-value">{{ formatted_paid }}</div>
+  </div>
+  <div class="summary-box box-red">
+    <div class="s-label">Balance Remaining</div>
+    <div class="s-value">{{ formatted_balance }}</div>
+  </div>
+</div>
+
+{% if paid_words %}
+<div class="amount-words">
+  Paid Amount in Words: <strong>{{ paid_words }} Only</strong>
+</div>
+{% endif %}
+
+<!-- ══ TRANSACTIONS TABLE ═══════════════════════════════════════════ -->
+<div class="section-title">Transaction History</div>
+
+{% if transactions %}
+<table>
+  <thead>
+    <tr>
+      <th class="text-center">#</th>
+      <th>Paid On</th>
+      <th>Payment Type</th>
+      <th>Paid To</th>
+      <th>Detail</th>
+      <th class="text-right">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for txn in transactions %}
+    <tr>
+      <td class="text-center">{{ forloop.counter }}</td>
+      <td>
+        {% if txn.paid_on %}
+          {{ txn.paid_on|date:"d M Y" }}
+        {% else %}
+          <span style="color:#bbb;">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if txn.payment_type %}
+          {% with pt=txn.payment_type|lower %}
+            {% if pt == "credited" %}
+              <span class="badge badge-cash">
+            {% else %}
+              <span class="badge badge-online">
+            {% endif %}
+            {{ txn.payment_type }}</span>
+          {% endwith %}
+        {% else %}
+          <span style="color:#bbb;">—</span>
+        {% endif %}
+      </td>
+      <td>{{ txn.paid_to|default:"—" }}</td>
+      <td style="color:#555;">{{ txn.detail|default:"—" }}</td>
+      <td class="text-right font-bold">{{ txn.amount }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No transactions found for this ledger.</div>
+{% endif %}
+
+<!-- ══ FOOTER ═══════════════════════════════════════════════════════ -->
+<div class="footer">
+  <span>This is a system-generated document.</span>
+  
+</div>
+
+</body>
+</html>

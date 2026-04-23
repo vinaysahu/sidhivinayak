@@ -6,8 +6,12 @@ from common.filters.adminModelFilter import TableForiegnKeyListFilter
 from django.db.models import Q
 from django.db.models import F
 from num2words import num2words
+from django.urls import path, reverse
 from ..utils import format_indian_currency, amount_to_words
 from django.utils.html import format_html
+from django.http import HttpResponseRedirect, HttpResponse
+from django.template.loader import render_to_string
+import weasyprint
 
 class UserLedgerTransactionsInline(admin.TabularInline):
     model = UserLedgerTransaction
@@ -78,9 +82,13 @@ class UserLedgerTransactionsInline(admin.TabularInline):
 
 class UserLedgerAdmin(admin.ModelAdmin):
     list_select_related = True
-    list_display = ['creditor_name', 'debtor_name', 'project_id', 'formatted_amount', 'formatted_balance', 'paid_amount' ] 
+    list_display = ['creditor_name', 'debtor_name', 'project_id', 'formatted_amount', 'formatted_balance', 'paid_amount', 'ledger_actions' ] 
     exclude = ('created_at', 'updated_at')
     readonly_fields = ['paid_amount']
+
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
 
     def creditor_name(self, obj):
         if obj.creditor.first_name: 
@@ -118,6 +126,21 @@ class UserLedgerAdmin(admin.ModelAdmin):
     search_fields = ['amount', 'balance']
     list_filter = [TableForiegnKeyListFilter("Projects", "project_id", "name", Projects)]
 
+    # ─── naya: Actions column with Download Ledger button ──────────────────
+
+    def ledger_actions(self, obj):
+        pdf_url = reverse('admin:download_user_ledger', args=[obj.pk])
+        return format_html(
+            '<a href="{}" target="_blank" '
+            'style="background:#0d6efd;color:white;padding:5px 12px;'
+            'border-radius:4px;text-decoration:none;font-size:12px;'
+            'white-space:nowrap;">📄 Download Ledger</a>',
+            pdf_url
+        )
+    ledger_actions.short_description = "Actions"
+    ledger_actions.allow_tags = True
+    
+
     class Media:
         js = ('admin/js/amountFormat1.js',)
 
@@ -127,5 +150,48 @@ class UserLedgerAdmin(admin.ModelAdmin):
         if user.is_superuser:
             return qs
         return qs.filter(Q(creditor=user) | Q(debtor=user)).distinct()
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            # ✅ naya URL — ledger PDF
+            path(
+                'user-ledger/<int:ledger_id>/pdf/',
+                self.admin_site.admin_view(self.download_ledger_pdf),
+                name='download_user_ledger'
+            ),
+        ]
+        return custom_urls + urls
+    
+    def download_ledger_pdf(self, request, ledger_id):
+        ledger = UserLedger.objects.select_related().get(pk=ledger_id)
+
+        # Saari transactions fetch karo date ke order mein
+        transactions = UserLedgerTransaction.objects.filter(
+            user_ledger=ledger
+        ).order_by(F('paid_on').asc(nulls_last=True))
+
+        # Calculations
+        paid_amount = (ledger.amount - ledger.balance) if (ledger.amount and ledger.balance) else 0
+        paid_words  = num2words(int(paid_amount), lang='en_IN').title() if paid_amount else ""
+
+        context = {
+            'ledger':       ledger,
+            'transactions': transactions,
+            'paid_amount':  paid_amount,
+            'paid_words':   paid_words,
+            'formatted_amount':  format_indian_currency(ledger.amount),
+            'formatted_balance': format_indian_currency(ledger.balance),
+            'formatted_paid':    format_indian_currency(paid_amount),
+        }
+
+        html_string = render_to_string('admin/accounts/user_ledger_pdf.html', context)
+        pdf_file    = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        # inline → browser mein khulega naye tab mein
+        response['Content-Disposition'] = f'inline; filename="ledger_{ledger_id}.pdf"'
+        return response
+
 
 admin.site.register(UserLedger, UserLedgerAdmin)

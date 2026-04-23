@@ -41,6 +41,10 @@ class ProjectMaterialsAdmin(admin.ModelAdmin):
 
     readonly_fields = ['extract_button']
 
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+
     def extract_button(self, obj):
         
 

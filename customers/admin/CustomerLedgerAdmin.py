@@ -10,17 +10,19 @@ from num2words import num2words
 from common.utils.format_currency import format_indian_currency
 from django.utils.html import format_html
 from django.urls import path, reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.db import transaction
+from django.template.loader import render_to_string
+import weasyprint
+
 
 class CustomerLedgerTransactionsInline(admin.TabularInline):
     model = CustomerLedgerTransaction
     extra = 2
     exclude = ('created_at', 'updated_at') 
-    # max_num = 10 
     verbose_name = "Customer Ledger Transaction"
     verbose_name_plural = "Customer Ledger Transactions"
-    fields = ['paid_on','payment_type','amount','paid_to','detail'] 
+    fields = ['paid_on', 'payment_type', 'amount', 'paid_to', 'detail'] 
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -36,13 +38,12 @@ class CustomerLedgerTransactionsInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
-    
+
 
 class CustomerLedgerRequestInline(admin.TabularInline):
     model = CustomerRequestTransaction
     extra = 0
     exclude = ('created_at', 'updated_at') 
-    # max_num = 10 
     verbose_name = "Customer Transaction Request"
     verbose_name_plural = "Customer Transaction Requests" 
     fields = [
@@ -68,7 +69,7 @@ class CustomerLedgerRequestInline(admin.TabularInline):
         return qs.filter(status=10).order_by(F('paid_on').asc(nulls_last=True))
     
     def action_button(self, obj):
-        url = reverse('admin:accept_customer_request', args=[obj.id])
+        url  = reverse('admin:accept_customer_request', args=[obj.id])
         url1 = reverse('admin:reject_customer_request', args=[obj.id])
 
         return format_html(
@@ -92,20 +93,35 @@ class CustomerLedgerRequestInline(admin.TabularInline):
     def has_delete_permission(self, request, obj=None):
         return False
 
-      
+
 class CustomerLedgerAdmin(admin.ModelAdmin):
 
     list_select_related = True
-    list_display = ['customer_id', 'project_id', 'project_house_id', 'formatted_amount', 'formatted_balance', 'paid_amount' ] # grid mae kaisa view
-    exclude = ('created_at', 'updated_at')
 
+    # ✅ 'ledger_actions' column add ki gayi
+    list_display = [
+        'customer_id',
+        'project_id',
+        'project_house_id',
+        'formatted_amount',
+        'formatted_balance',
+        'paid_amount',
+        'ledger_actions',        # ← naya column
+    ]
+
+    exclude = ('created_at', 'updated_at')
     readonly_fields = ['paid_amount']
+
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+
+    # ─── existing display methods ───────────────────────────────────────────
 
     def formatted_amount(self, obj):
         return format_indian_currency(obj.amount)
     formatted_amount.short_description = "Amount"
 
-    # 👇 FORMAT BALANCE
     def formatted_balance(self, obj):
         return format_indian_currency(obj.balance)
     formatted_balance.short_description = "Balance"
@@ -113,22 +129,37 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
     def paid_amount(self, obj):
         if obj.amount and obj.balance:
             paidAmount = obj.amount - obj.balance
-
-            # number → words
             words = num2words(paidAmount, lang='en_IN').title()
             return format_html(
-            "{}<br><small>({})</small>",
-            format_indian_currency(paidAmount),
-            words
-        )
+                "{}<br><small>({})</small>",
+                format_indian_currency(paidAmount),
+                words
+            )
         return "-"
     paid_amount.short_description = "Paid Amount"
 
-    inlines = [CustomerLedgerTransactionsInline,CustomerLedgerRequestInline]
+    # ─── naya: Actions column with Download Ledger button ──────────────────
+
+    def ledger_actions(self, obj):
+        pdf_url = reverse('admin:download_customer_ledger', args=[obj.pk])
+        return format_html(
+            '<a href="{}" target="_blank" '
+            'style="background:#0d6efd;color:white;padding:5px 12px;'
+            'border-radius:4px;text-decoration:none;font-size:12px;'
+            'white-space:nowrap;">📄 Download Ledger</a>',
+            pdf_url
+        )
+    ledger_actions.short_description = "Actions"
+    ledger_actions.allow_tags = True
+
+    # ─── inlines ───────────────────────────────────────────────────────────
+
+    inlines = [CustomerLedgerTransactionsInline, CustomerLedgerRequestInline]
+
+    # ─── custom URLs ───────────────────────────────────────────────────────
 
     def get_urls(self):
         urls = super().get_urls()
-
         custom_urls = [
             path(
                 'accept-customer-request/<int:request_id>/',
@@ -140,13 +171,19 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.reject_customer_request),
                 name='reject_customer_request'
             ),
+            # ✅ naya URL — ledger PDF
+            path(
+                'customer-ledger/<int:ledger_id>/pdf/',
+                self.admin_site.admin_view(self.download_ledger_pdf),
+                name='download_customer_ledger'
+            ),
         ]
-
         return custom_urls + urls
+
+    # ─── existing request views ────────────────────────────────────────────
 
     def accept_customer_request(self, request, request_id):
         customer_request = CustomerRequestTransaction.objects.get(id=request_id)
-
         try:
             with transaction.atomic():
                 customerLedgerEntry = CustomerLedgerTransaction.objects.create(
@@ -157,43 +194,71 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
                     paid_to=customer_request.paid_to,
                     detail=customer_request.detail,
                 )
-
                 if customerLedgerEntry:
-                    customer_request.status = CustomerRequestTransaction.STATUS_ACCEPTED   # accepted
+                    customer_request.status = CustomerRequestTransaction.STATUS_ACCEPTED
                     customer_request.save()
 
             self.message_user(request, "Customer request accepted successfully.", level='success')
         except Exception as e:
             self.message_user(request, f"Error: {str(e)}", level='error')
-        
+
         return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    
+
     def reject_customer_request(self, request, request_id):
         customer_request = CustomerRequestTransaction.objects.get(id=request_id)
-
-        customer_request.status = CustomerRequestTransaction.STATUS_DELETED   # accepted
+        customer_request.status = CustomerRequestTransaction.STATUS_DELETED
         customer_request.save()
-
         self.message_user(request, "Customer request rejected successfully.", level='success')
-
         return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
+    # ─── naya: PDF generation view ─────────────────────────────────────────
+
+    def download_ledger_pdf(self, request, ledger_id):
+        ledger = CustomerLedger.objects.select_related().get(pk=ledger_id)
+
+        # Saari transactions fetch karo date ke order mein
+        transactions = CustomerLedgerTransaction.objects.filter(
+            customer_ledger=ledger
+        ).order_by(F('paid_on').asc(nulls_last=True))
+
+        # Calculations
+        paid_amount = (ledger.amount - ledger.balance) if (ledger.amount and ledger.balance) else 0
+        paid_words  = num2words(int(paid_amount), lang='en_IN').title() if paid_amount else ""
+
+        context = {
+            'ledger':       ledger,
+            'transactions': transactions,
+            'paid_amount':  paid_amount,
+            'paid_words':   paid_words,
+            'formatted_amount':  format_indian_currency(ledger.amount),
+            'formatted_balance': format_indian_currency(ledger.balance),
+            'formatted_paid':    format_indian_currency(paid_amount),
+        }
+
+        html_string = render_to_string('admin/customers/customer_ledger_pdf.html', context)
+        pdf_file    = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        # inline → browser mein khulega naye tab mein
+        response['Content-Disposition'] = f'inline; filename="ledger_{ledger_id}.pdf"'
+        return response
+
+    # ─── filters / search ──────────────────────────────────────────────────
+
     search_fields = ['amount', 'balance']
-    list_filter = [ TableForiegnKeyListFilter("Projects", "project_id","name", Projects)]
+    list_filter   = [TableForiegnKeyListFilter("Projects", "project_id", "name", Projects)]
 
     class Media:
-            js = ('admin/js/amountFormat1.js',)
+        js = ('admin/js/amountFormat1.js',)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs   = super().get_queryset(request)
         user = request.user
-
         if user.is_superuser:
             return qs
-
         return qs.filter(
             Q(creditor=user) | Q(debtor=user)
         ).distinct()
 
 
-admin.site.register(CustomerLedger,CustomerLedgerAdmin)
+admin.site.register(CustomerLedger, CustomerLedgerAdmin)

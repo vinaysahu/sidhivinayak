@@ -19,6 +19,10 @@ class ProjectWorkerAttendancesAdmin(admin.ModelAdmin):
     # search_fields = ["plot_no"]
     list_filter = [TableForiegnKeyListHasPermissionFilter("Projects", "project_id","name",Projects,UserProjectPermissions), TableForiegnKeyListFilter("Workers", "worker_id","name",Workers)]
 
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+
     def get_project_name(self, obj):
         return format_html("{} ({})",obj.project_worker_id.project_id,obj.project_worker_id.worker_id)
     

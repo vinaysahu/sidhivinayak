@@ -115,6 +115,10 @@ class ProjectsAdmin(admin.ModelAdmin):
     
     readonly_fields = ['expense_summary']
 
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
         

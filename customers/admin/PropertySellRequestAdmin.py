@@ -9,6 +9,10 @@ class PropertySellRequestAdmin(admin.ModelAdmin):
     list_display_staff = [ "owner_name", "phone_no", "alt_phone_no", "email", "address", "area_sqyd", "dimension", "expected_price", "reason_for_selling", "notes", "status", "created_at", "updated_at" ]
     exclude_staff = ('created_by', 'created_at', 'updated_at', "project") 
 
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+    
     def get_list_display(self, request):
         if request.user.is_superuser:
             return self.list_display_superuser

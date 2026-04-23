@@ -17,6 +17,10 @@ class ProjectHousesAdmin(admin.ModelAdmin):
     search_fields = ["plot_no"]
     list_filter = ["status", TableForiegnKeyListHasPermissionFilter("Projects", "project_id","name",Projects,UserProjectPermissions)]
 
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         field = super().formfield_for_foreignkey(db_field, request, **kwargs)
 

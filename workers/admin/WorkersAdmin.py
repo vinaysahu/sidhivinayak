@@ -14,6 +14,10 @@ class WorkersAdmin(admin.ModelAdmin):
     search_fields = ["name"]
     list_filter = [TableForiegnKeyListFilter("Worker Type", "worker_type_id", "name", WorkerTypes), "wages_type", "status"]
 
+    list_per_page = 15          # ← yeh add karo
+    list_max_show_all = 100     # ← yeh add karo
+    list_select_related = True
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
 
