@@ -91,10 +91,10 @@ JAZZMIN_SETTINGS = {
         "projects.ProjectMaterials": "fas fa-toolbox",
         "projects.UserProjectPermissions": "fas fa-user-lock",
         "projects.ProjectSupplierLedger": "fas fa-truck-loading",
-        "projects.ProjectLedger": "fas fa-file-invoice-rupee",
+        "projects.ProjectLedger": "fas fa-file-invoice",
         
         # Contractor
-        "contractor.Projects": "fas fa-construction",
+        "contractor.Projects": "fas fa-building",
         "contractor.ProjectWorkerAttendances": "fas fa-user-check",
         
         # Customers

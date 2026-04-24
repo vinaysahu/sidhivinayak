@@ -92,6 +92,12 @@
     </tr>
     {% endfor %}
   </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2" style="text-align:right;font-weight:bold;background:#f8f9fa;padding:6px 8px;">Total</td>
+      <td style="text-align:right;font-weight:bold;color:#198754;background:#f8f9fa;padding:6px 8px;">{{ report.customer_grand_total }}</td>
+    </tr>
+  </tfoot>
 </table>
 {% else %}
 <div class="no-data">No customer transactions found.</div>

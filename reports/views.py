@@ -61,11 +61,13 @@ def _build_report_data(user_obj, project_obj):
     )
 
     customer_rows = []
+    grand_total = 0
     for row in customer_qs:
         first = row['customer_ledger__customer_id__first_name'] or ''
         last = row['customer_ledger__customer_id__last_name'] or ''
         username = row['customer_ledger__customer_id__username'] or ''
         name = f"{first} {last}".strip() or username
+        grand_total += row['total_paid'] or 0
         customer_rows.append({
             'customer_name': name,
             'total_paid': format_indian_currency(row['total_paid']),
@@ -74,6 +76,7 @@ def _build_report_data(user_obj, project_obj):
     return {
         'user_ledger_info': user_ledger_info,
         'customer_rows': customer_rows,
+        'customer_grand_total': format_indian_currency(grand_total),
     }
 
 
