@@ -31,6 +31,7 @@ urlpatterns = [
     path('customer/requests/', customer_request_dashboard, name='ledger update request'),
     path('customer/requests/list/', customer_request_list, name='ledger list request'),
     path("projects/get-worker-wages/", get_worker_wages, name="get-worker-wages"),
+    path('reports/', include('reports.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:

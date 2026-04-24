@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "workers.apps.WorkersConfig",
     "globals.apps.GlobalsConfig",
     "common",
+    "reports",
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -119,6 +120,9 @@ JAZZMIN_SETTINGS = {
         "globals.Localities": "fas fa-street-view",
         "globals.Amenities": "fas fa-swimming-pool",
         "globals.Materials": "fas fa-cubes",
+
+        # Reports
+        "reports.UserCustomerLedger": "fas fa-chart-bar",
     },
     
     # Default icons for apps and models that don't have one
@@ -134,6 +138,7 @@ JAZZMIN_SETTINGS = {
         "customers",
         "workers",
         "globals",
+        "reports",
     ],
 }
 

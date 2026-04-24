@@ -1,0 +1,196 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}User Customer Ledger Report{% endblock %}
+{% block content_title %}<h2 class="mb-0"><i class="fas fa-chart-bar mr-2"></i>User Customer Ledger Report</h2>{% endblock %}
+
+{% block content %}
+
+{# ── Filter + User Info Card ─────────────────────────────────────────── #}
+<div class="card card-primary card-outline shadow-sm mb-4" style="width:100%">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter</h3>
+    {% if report %}
+    <div class="card-tools">
+      <a href="{% url 'reports:user_customer_ledger_pdf' %}?user={{ selected_user.id }}&project={{ selected_project.id }}"
+         class="btn btn-danger btn-sm" target="_blank">
+        <i class="fas fa-file-pdf mr-1"></i>Download PDF
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card-body">
+    {# Filter Form – full width #}
+    <form method="get" id="reportForm">
+      <div class="row">
+        <div class="col-md-5">
+          <div class="form-group mb-2">
+            <label for="id_user" class="font-weight-bold text-muted small mb-1">
+              <i class="fas fa-user mr-1"></i>User
+            </label>
+            {{ form.user }}
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="form-group mb-2">
+            <label for="id_project" class="font-weight-bold text-muted small mb-1">
+              <i class="fas fa-building mr-1"></i>Project
+            </label>
+            {{ form.project }}
+          </div>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <div class="form-group mb-2 w-100">
+            <button type="submit" class="btn btn-primary btn-block">
+              <i class="fas fa-search mr-1"></i>Generate
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    {# User Ledger Info – shown after generate #}
+    {% if report and report.user_ledger_info %}
+    {% with info=report.user_ledger_info %}
+    <hr class="mt-1 mb-3">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="info-box bg-light mb-0" style="min-height:unset">
+          <span class="info-box-icon bg-primary elevation-1" style="font-size:1.4rem">
+            <i class="fas fa-user"></i>
+          </span>
+          <div class="info-box-content">
+            <span class="info-box-text text-muted">Name</span>
+            <span class="info-box-number">{{ info.name }}</span>
+            <span class="info-box-text text-muted" style="font-size:0.8rem">{{ info.project_name }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div class="row">
+          <div class="col-sm-4">
+            <div class="small-box bg-info mb-0">
+              <div class="inner">
+                <p class="mb-0" style="font-size:1rem;font-weight:700">{{ info.amount }}</p>
+                <p class="mb-0" style="font-size:0.75rem">Total Amount</p>
+              </div>
+              <div class="icon"><i class="fas fa-rupee-sign"></i></div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="small-box bg-success mb-0">
+              <div class="inner">
+                <p class="mb-0" style="font-size:1rem;font-weight:700">{{ info.paid_amount }}</p>
+                <p class="mb-0" style="font-size:0.75rem">Paid Amount</p>
+              </div>
+              <div class="icon"><i class="fas fa-check-circle"></i></div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="small-box bg-warning mb-0">
+              <div class="inner">
+                <p class="mb-0" style="font-size:1rem;font-weight:700">{{ info.balance }}</p>
+                <p class="mb-0" style="font-size:0.75rem">Balance</p>
+              </div>
+              <div class="icon"><i class="fas fa-balance-scale"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+    {% elif report and not report.user_ledger_info %}
+    <hr class="mt-1 mb-2">
+    <div class="alert alert-warning mb-0">
+      <i class="fas fa-exclamation-triangle mr-1"></i>
+      No User Ledger found for <strong>{{ selected_user.get_full_name|default:selected_user.username }}</strong>
+      in project <strong>{{ selected_project.name }}</strong>.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Customer Transactions Section ───────────────────────────────────── #}
+{% if report %}
+{% if report.customer_rows %}
+<div class="card card-outline card-success shadow-sm">
+  <div class="card-header">
+    <h3 class="card-title">
+      <i class="fas fa-users mr-1"></i>Customer Payments
+      <span class="badge badge-success ml-2">{{ report.customer_rows|length }}</span>
+    </h3>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover table-striped mb-0">
+      <thead class="thead-dark">
+        <tr>
+          <th style="width:50px">#</th>
+          <th><i class="fas fa-user mr-1"></i>Customer Name</th>
+          <th class="text-right" style="width:200px"><i class="fas fa-rupee-sign mr-1"></i>Amount Paid</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.customer_rows %}
+        <tr>
+          <td class="text-muted">{{ forloop.counter }}</td>
+          <td class="font-weight-bold">{{ row.customer_name }}</td>
+          <td class="text-right text-success font-weight-bold">{{ row.total_paid }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="alert alert-info">
+  <i class="fas fa-info-circle mr-1"></i>
+  No customer transactions found for <strong>{{ selected_user.get_full_name|default:selected_user.username }}</strong>
+  in project <strong>{{ selected_project.name }}</strong>.
+</div>
+{% endif %}
+{% endif %}
+
+<script>
+(function () {
+  var userSelect = document.getElementById('id_user');
+  var projectSelect = document.getElementById('id_project');
+  var ajaxUrl = '{% url "reports:ajax_projects_for_user" %}';
+
+  function loadProjects(userId, selectedProjectId) {
+    projectSelect.innerHTML = '<option value="">-- Loading... --</option>';
+    fetch(ajaxUrl + '?user_id=' + userId)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        projectSelect.innerHTML = '<option value="">-- Select Project --</option>';
+        data.projects.forEach(function(p) {
+          var opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          if (selectedProjectId && p.id == selectedProjectId) opt.selected = true;
+          projectSelect.appendChild(opt);
+        });
+      })
+      .catch(function() {
+        projectSelect.innerHTML = '<option value="">-- Select Project --</option>';
+      });
+  }
+
+  userSelect.addEventListener('change', function() {
+    if (this.value) {
+      loadProjects(this.value, null);
+    } else {
+      projectSelect.innerHTML = '<option value="">-- Select Project --</option>';
+    }
+  });
+
+  var currentUserId = userSelect.value;
+  var currentProjectId = '{{ request.GET.project|default:"" }}';
+  if (currentUserId) {
+    loadProjects(currentUserId, currentProjectId);
+  }
+})();
+</script>
+
+{% endblock %}
