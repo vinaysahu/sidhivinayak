@@ -45,45 +45,226 @@ h1, h2, h3, h4, h5 {
     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
-/* Sidebar Styling */
+/* ── Layout wrapper ── */
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.content-inner {
+    padding: 0 1.5rem;
+}
+
+/* ── Sidebar ── */
 .sidebar {
-    background: rgba(30, 41, 59, 0.95) !important;
+    --sb-width: 260px;
+    --sb-collapsed: 68px;
+
+    width: var(--sb-width);
+    min-width: var(--sb-width);
+    background: rgba(30, 41, 59, 0.97);
     backdrop-filter: blur(16px);
-    border-right: 1px solid var(--glass-border);
+    border-right: 1px solid rgba(255,255,255,0.06);
     height: 100vh;
-    padding: 2rem 1.5rem;
     position: sticky;
     top: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.28s cubic-bezier(0.4,0,0.2,1),
+                min-width 0.28s cubic-bezier(0.4,0,0.2,1);
+    z-index: 100;
 }
 
-.sidebar h4 {
-    color: #fff;
+.sidebar.collapsed {
+    width: var(--sb-collapsed);
+    min-width: var(--sb-collapsed);
+}
+
+/* Header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1rem 1.25rem 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.brand-icon {
+    color: var(--primary);
     font-size: 1.25rem;
-    margin-bottom: 2rem;
-    padding-left: 0.5rem;
-    border-left: 4px solid var(--primary);
+    flex-shrink: 0;
 }
 
-.sidebar a {
+.sidebar-title {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 0.18s ease, max-width 0.28s ease;
+    max-width: 160px;
+}
+
+.sidebar.collapsed .sidebar-title {
+    opacity: 0;
+    max-width: 0;
+}
+
+/* Toggle button */
+.sidebar-toggle-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-toggle-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.sidebar-toggle-btn i {
+    font-size: 0.7rem;
+    transition: transform 0.28s ease;
+}
+
+/* Nav */
+.sidebar-nav {
+    flex: 1;
+    padding: 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-nav .nav-link,
+.sidebar-footer .nav-link {
     color: #cbd5e1;
-    padding: 0.75rem 1rem;
+    padding: 0.7rem 0.85rem;
     border-radius: 8px;
-    margin-bottom: 0.5rem;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
     text-decoration: none;
     display: flex;
     align-items: center;
+    gap: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    position: relative;
 }
 
-.sidebar a:hover {
+.sidebar-nav .nav-link:hover,
+.sidebar-footer .nav-link:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    transform: translateX(4px);
 }
 
-.sidebar a.active {
+.sidebar.collapsed .sidebar-nav .nav-link:hover,
+.sidebar.collapsed .sidebar-footer .nav-link:hover {
+    transform: none;
+}
+
+.sidebar-nav .nav-link.active {
     background: var(--primary);
     color: #fff;
+}
+
+.nav-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+}
+
+.nav-text {
+    opacity: 1;
+    transition: opacity 0.18s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.sidebar.collapsed .nav-text {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* CSS tooltip when collapsed */
+.sidebar.collapsed .sidebar-nav .nav-link,
+.sidebar.collapsed .sidebar-footer .nav-link {
+    justify-content: center;
+    padding: 0.7rem;
+}
+
+.sidebar.collapsed .sidebar-nav .nav-link::after,
+.sidebar.collapsed .sidebar-footer .nav-link::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    color: #fff;
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 200;
+}
+
+.sidebar.collapsed .sidebar-nav .nav-link:hover::after,
+.sidebar.collapsed .sidebar-footer .nav-link:hover::after {
+    opacity: 1;
+}
+
+/* Footer */
+.sidebar-footer {
+    padding: 0.75rem;
+    flex-shrink: 0;
+}
+
+.sidebar-divider {
+    border-color: rgba(255,255,255,0.1);
+    margin: 0 0 0.5rem;
+}
+
+.logout-link {
+    color: #f87171 !important;
+}
+
+.logout-link:hover {
+    background: rgba(248, 113, 113, 0.12) !important;
+    color: #fca5a5 !important;
 }
 
 /* Buttons */

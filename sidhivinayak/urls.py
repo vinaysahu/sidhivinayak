@@ -29,7 +29,7 @@ urlpatterns = [
     path('customer/profile/', customer_dashboard, name='profile'),
     path('customer/dashboard/', customer_dashboard, name='dashboard'),
     path('customer/requests/', customer_request_dashboard, name='ledger update request'),
-    path('customer/requests/list', customer_request_list, name='ledger list request'),
+    path('customer/requests/list/', customer_request_list, name='ledger list request'),
     path("projects/get-worker-wages/", get_worker_wages, name="get-worker-wages"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

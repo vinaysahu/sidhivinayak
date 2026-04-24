@@ -60,7 +60,7 @@ class ProjectsAdmin(admin.ModelAdmin):
             path(
             "worker-attendance/<int:project_id>/",
             self.admin_site.admin_view(self.project_worker_attendance_page),
-            name="projects_worker_attendance",
+            name="contractor_worker_attendance",
             ),
         ]
         return custom_urls + urls

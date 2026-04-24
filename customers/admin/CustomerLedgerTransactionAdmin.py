@@ -42,7 +42,6 @@ class CustomerLedgerTransactionAdmin(admin.ModelAdmin):
 
     list_per_page = 15          # ← yeh add karo
     list_max_show_all = 100     # ← yeh add karo
-    list_select_related = True
 
     def formatted_amount(self, obj):
         return format_indian_currency(obj.amount)

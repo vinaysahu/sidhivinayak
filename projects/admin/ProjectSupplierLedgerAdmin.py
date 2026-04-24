@@ -27,7 +27,6 @@ class ProjectSupplierLedgerAdmin(admin.ModelAdmin):
     
     list_per_page = 15          # ← yeh add karo
     list_max_show_all = 100     # ← yeh add karo
-    list_select_related = True
     
     inlines = [ProjectSupplierPaymentInline]
 

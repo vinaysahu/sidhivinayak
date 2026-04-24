@@ -55,14 +55,12 @@ def customDropdownFilterForAnotherTable(title, parameter_name, field_name, table
         table_id = self.value()
 
         if table_id:
-            query = Q()  # ✅ define
-
+            query = Q()
             for field in filter_fields:
                 query |= Q(**{field: table_id})
-
             return queryset.filter(query)
 
-        return queryset.none()
+        return queryset
 
     # ✅ Dynamic class create
     return type(

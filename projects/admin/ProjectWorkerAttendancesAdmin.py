@@ -69,8 +69,11 @@ class ProjectWorkerAttendancesAdmin(admin.ModelAdmin):
         return True
     
     def save_model(self, request, obj, form, change):
-        
-        project_workerId= int(request.GET.get("project_worker_id"))
+        raw_id = request.GET.get("project_worker_id")
+        if not raw_id:
+            self.message_user(request, "Project Worker ID missing.", level=messages.ERROR)
+            return
+        project_workerId = int(raw_id)
 
         hasError = False
 
@@ -105,8 +108,8 @@ class ProjectWorkerAttendancesAdmin(admin.ModelAdmin):
         if not hasError:
             super().save_model(request, obj, form, change)
 
-    def response_add(self, request, obj, post_url_continue=None):  # yae code model save hone k baad mae chlta hai
-        project_workerId= int(request.GET.get("project_worker_id"))
+    def response_add(self, request, obj, post_url_continue=None):
+        project_workerId = int(request.GET.get("project_worker_id", 0))
         projectWorker = ProjectWorkers.objects.get(id=project_workerId)
         return redirect(f'/admin/projects/projects/{projectWorker.project_id.id}/change/#project-workers-tab')
 

@@ -12,7 +12,10 @@ from django.utils.html import format_html
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-import weasyprint
+try:
+    import weasyprint
+except Exception:
+    weasyprint = None
 
 class UserLedgerTransactionsInline(admin.TabularInline):
     model = UserLedgerTransaction
@@ -111,7 +114,6 @@ class UserLedgerAdmin(admin.ModelAdmin):
 
     list_per_page = 15          # ← yeh add karo
     list_max_show_all = 100     # ← yeh add karo
-    list_select_related = True
 
     def creditor_name(self, obj):
         if obj.creditor.first_name: 
@@ -208,6 +210,8 @@ class UserLedgerAdmin(admin.ModelAdmin):
             'formatted_paid':    format_indian_currency(paid_amount),
         }
 
+        if weasyprint is None:
+            return HttpResponse("PDF generation is unavailable (weasyprint not installed).", status=503)
         html_string = render_to_string('admin/accounts/user_ledger_pdf.html', context)
         pdf_file    = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
 

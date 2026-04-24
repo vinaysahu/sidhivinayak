@@ -11,6 +11,7 @@ from ..models.ProjectSupplierLedger import ProjectSupplierLedger
 from django.urls import path, reverse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.html import format_html
+from django.template.loader import render_to_string
 from django.db.models import Sum
 from accounts.utils import format_indian_currency
 
@@ -231,12 +232,12 @@ class ProjectsAdmin(admin.ModelAdmin):
         
         total_exp = supplier_pay + worker_pay
 
-        return render(None, 'admin/projects/projects/expense_summary.html', {
+        return render_to_string('admin/projects/projects/expense_summary.html', {
             'supplier_pay': format_indian_currency(supplier_pay),
             'worker_pay': format_indian_currency(worker_pay),
             'total_exp': format_indian_currency(total_exp),
             'supplier_pending': format_indian_currency(supplier_pending),
-        }).content.decode('utf-8')
+        })
     
     expense_summary.short_description = "Project Expense Summary"
 

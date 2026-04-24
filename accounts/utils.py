@@ -46,9 +46,12 @@ def amount_to_words(amount):
     """
     Converts amount to words in Indian English format (e.g. One Lakh Twenty Three Thousand...)
     """
-    if amount is None or amount == "" or float(amount) == 0:
+    try:
+        if amount is None or amount == "" or decimal.Decimal(str(amount)) == 0:
+            return "Zero Rupees Only"
+    except (decimal.InvalidOperation, ValueError, TypeError):
         return "Zero Rupees Only"
-    
+
     try:
         # num2words with lang='en_IN' handles Lakhs/Crores
         words = num2words(amount, lang='en_IN').title()

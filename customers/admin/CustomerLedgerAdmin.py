@@ -13,7 +13,10 @@ from django.urls import path, reverse
 from django.http import HttpResponseRedirect, HttpResponse
 from django.db import transaction
 from django.template.loader import render_to_string
-import weasyprint
+try:
+    import weasyprint
+except Exception:
+    weasyprint = None
 
 
 class CustomerLedgerTransactionsInline(admin.TabularInline):
@@ -114,7 +117,6 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
 
     list_per_page = 15          # ← yeh add karo
     list_max_show_all = 100     # ← yeh add karo
-    list_select_related = True
 
     # ─── existing display methods ───────────────────────────────────────────
 
@@ -235,6 +237,8 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
             'formatted_paid':    format_indian_currency(paid_amount),
         }
 
+        if weasyprint is None:
+            return HttpResponse("PDF generation is unavailable (weasyprint not installed).", status=503)
         html_string = render_to_string('admin/customers/customer_ledger_pdf.html', context)
         pdf_file    = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
 
@@ -252,13 +256,10 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
         js = ('admin/js/amountFormat1.js',)
 
     def get_queryset(self, request):
-        qs   = super().get_queryset(request)
-        user = request.user
-        if user.is_superuser:
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
             return qs
-        return qs.filter(
-            Q(creditor=user) | Q(debtor=user)
-        ).distinct()
+        return qs.none()
 
 
 admin.site.register(CustomerLedger, CustomerLedgerAdmin)

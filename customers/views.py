@@ -49,31 +49,36 @@ def customer_dashboard(request):
 
     customerLedger = CustomerLedger.objects.filter(customer_id=customer).first()
 
-    customerTransactions = []
-    if customerLedger:
-        customerTransactions = customerLedger.customer_ledger_transactions.all().order_by('-paid_on')
+    if not customerLedger:
+        messages.error(request, "No ledger found for your account. Please contact admin.")
+        return render(request, 'frontend/customer/dashboard.html', {
+            'customer': customer,
+            'name': (customer.first_name or '') + ' ' + (customer.last_name or ''),
+        })
+
+    customerTransactions = customerLedger.customer_ledger_transactions.all().order_by('-paid_on')
 
     total_amount_words = num2words(customerLedger.amount, lang='en_IN').title()
     balance_words = num2words(customerLedger.balance, lang='en_IN').title()
-    paid_amount = (customerLedger.amount-customerLedger.balance)
+    paid_amount = customerLedger.amount - customerLedger.balance
     paid_amount_words = num2words(paid_amount, lang='en_IN').title()
 
     context = {
         'customer': customer,
-        'name': customer.first_name +" "+customer.last_name,
+        'name': (customer.first_name or '') + ' ' + (customer.last_name or ''),
         'email': customer.email,
         'total_amount': format_indian_currency(customerLedger.amount),
-        'total_amount_words':total_amount_words,
+        'total_amount_words': total_amount_words,
         'balance': format_indian_currency(customerLedger.balance),
-        'balance_words':balance_words,
+        'balance_words': balance_words,
         'paid_amount': format_indian_currency(paid_amount),
-        'paid_amount_words':paid_amount_words,
-        'transactions':customerTransactions,
+        'paid_amount_words': paid_amount_words,
+        'transactions': customerTransactions,
         'house_no': customerLedger.project_house_id.plot_no,
-        'format_indian_currency':format_indian_currency
+        'format_indian_currency': format_indian_currency,
     }
 
-    return render(request, 'frontend/customer/dashboard.html',context)
+    return render(request, 'frontend/customer/dashboard.html', context)
 
 def customer_request_list(request):
     if not request.session.get('customer_id'):
@@ -84,31 +89,39 @@ def customer_request_list(request):
 
     customerLedger = CustomerLedger.objects.filter(customer_id=customer).first()
 
-    customerRequestTransactions = []
-    if customerLedger:
-        customerRequestTransactions = customerLedger.customer_transactions.all().filter(status=CustomerRequestTransaction.STATUS_NEW).order_by('-paid_on')
+    if not customerLedger:
+        messages.error(request, "No ledger found for your account. Please contact admin.")
+        return render(request, 'frontend/customer/request_listing.html', {
+            'customer': customer,
+            'name': (customer.first_name or '') + ' ' + (customer.last_name or ''),
+            'transactions': [],
+        })
+
+    customerRequestTransactions = customerLedger.customer_transactions.filter(
+        status=CustomerRequestTransaction.STATUS_NEW
+    ).order_by('-paid_on')
 
     total_amount_words = num2words(customerLedger.amount, lang='en_IN').title()
     balance_words = num2words(customerLedger.balance, lang='en_IN').title()
-    paid_amount = (customerLedger.amount-customerLedger.balance)
+    paid_amount = customerLedger.amount - customerLedger.balance
     paid_amount_words = num2words(paid_amount, lang='en_IN').title()
 
     context = {
         'customer': customer,
-        'name': customer.first_name +" "+customer.last_name,
+        'name': (customer.first_name or '') + ' ' + (customer.last_name or ''),
         'email': customer.email,
         'total_amount': format_indian_currency(customerLedger.amount),
-        'total_amount_words':total_amount_words,
+        'total_amount_words': total_amount_words,
         'balance': format_indian_currency(customerLedger.balance),
-        'balance_words':balance_words,
+        'balance_words': balance_words,
         'paid_amount': format_indian_currency(paid_amount),
-        'paid_amount_words':paid_amount_words,
-        'transactions':customerRequestTransactions,
+        'paid_amount_words': paid_amount_words,
+        'transactions': customerRequestTransactions,
         'house_no': customerLedger.project_house_id.plot_no,
-        'format_indian_currency':format_indian_currency
+        'format_indian_currency': format_indian_currency,
     }
 
-    return render(request, 'frontend/customer/request_listing.html',context)
+    return render(request, 'frontend/customer/request_listing.html', context)
 
 
 def customer_request_dashboard(request):

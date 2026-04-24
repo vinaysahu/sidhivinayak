@@ -22,7 +22,7 @@ class ProjectWorkerAttendances(models.Model):
         verbose_name_plural = "Project Worker Attendances"
 
     def __str__(self):
-        return 'self.project_worker_id'
+        return str(self.project_worker_id)
     
     def save(self, *args, **kwargs):
         self.project_id = self.project_worker_id.project_id
