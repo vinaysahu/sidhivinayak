@@ -6,56 +6,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Panel | SVED</title>
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for better icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
-
-    <!-- Custom Modern Style -->
     <link rel="stylesheet" href="{% static 'css/modern_style.css' %}">
 </head>
 
 <body>
 
-<div class="container-fluid p-0">
-    <div class="row g-0">
-
-        <!-- Sidebar -->
-        <div class="col-lg-2 col-md-3">
-            <div class="sidebar">
-                <h4>SVED</h4>
-                <nav class="nav flex-column mt-4">
-                    <a href="/customer/dashboard" class="nav-link"><i class="fas fa-th-large me-2"></i> Dashboard</a>
-                    <a href="/customer/requests" class="nav-link"><i class="fas fa-plus-circle me-2"></i> Request Add Payment</a>
-                    <a href="/customer/requests/list" class="nav-link"><i class="fas fa-list-ul me-2"></i> Request Listing</a>
-                    <div class="mt-auto pt-4">
-                        <hr class="border-secondary opacity-25">
-                        <a href="{% url 'logout' %}" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
-                    </div>
-                </nav>
-            </div>
-        </div>
-
-        <!-- Content -->
-        <div class="col-lg-10 col-md-9 content">
-        <div class="row g-0">
-        <div class="col-lg-10 offset-lg-1 col-md-10 offset-md-1 content">
-            <div class="container py-4 fade-in mr-4 ml-4">
-                {% block content %}{% endblock %}
-            </div>
-        </div>
-        </div>
-        </div>
-
-    </div>
+<!-- ── Mobile Topbar (hidden on desktop via CSS) ── -->
+<div class="mobile-topbar" id="mobileTopbar">
+    <button class="sidebar-hamburger" id="sidebarToggle" aria-label="Open menu">
+        <i class="fas fa-bars"></i>
+    </button>
+    <span class="mobile-brand">SVED</span>
 </div>
 
+<!-- ── Backdrop when sidebar is open on mobile ── -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-wrapper">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar" id="mainSidebar">
+
+        <!-- Sidebar header -->
+        <div class="d-flex align-items-center justify-content-between px-3 py-3"
+             style="border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0;">
+            <span class="text-white fw-bold" style="font-size:1.1rem; letter-spacing:-0.02em;">SVED</span>
+            <!-- Close button — only visible on mobile -->
+            <button class="sidebar-close-btn d-md-none" id="sidebarClose" aria-label="Close menu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Navigation links -->
+        <nav class="nav flex-column px-2 py-3" style="flex:1; gap:2px;">
+            <a href="/customer/dashboard"
+               class="nav-link {% if request.path == '/customer/dashboard' %}active{% endif %}">
+                <i class="fas fa-th-large" style="width:16px; text-align:center;"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/customer/requests"
+               class="nav-link {% if request.path == '/customer/requests' %}active{% endif %}">
+                <i class="fas fa-plus-circle" style="width:16px; text-align:center;"></i>
+                <span>Request Add Payment</span>
+            </a>
+            <a href="/customer/requests/list"
+               class="nav-link {% if request.path == '/customer/requests/list' %}active{% endif %}">
+                <i class="fas fa-list-ul" style="width:16px; text-align:center;"></i>
+                <span>Request Listing</span>
+            </a>
+        </nav>
+
+        <!-- Logout at bottom -->
+        <div class="px-2 pb-3" style="flex-shrink:0;">
+            <hr style="border-color:rgba(255,255,255,0.1); margin:0 0 0.5rem;">
+            <a href="{% url 'logout' %}" class="nav-link text-danger">
+                <i class="fas fa-sign-out-alt" style="width:16px; text-align:center;"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <main class="main-content">
+        <div class="content-inner">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+</div><!-- /.app-wrapper -->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    var toggle  = document.getElementById('sidebarToggle');
+    var close   = document.getElementById('sidebarClose');
+    var sidebar = document.getElementById('mainSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('active');
+        document.body.classList.add('sidebar-body-lock');
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+        document.body.classList.remove('sidebar-body-lock');
+    }
+
+    toggle.addEventListener('click', openSidebar);
+    close.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    /* Auto-close sidebar on nav-link click (mobile) */
+    sidebar.querySelectorAll('a.nav-link').forEach(function (link) {
+        link.addEventListener('click', function () {
+            if (window.innerWidth < 768) closeSidebar();
+        });
+    });
+
+    /* If window resizes to desktop, reset mobile state */
+    window.addEventListener('resize', function () {
+        if (window.innerWidth >= 768) {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.classList.remove('sidebar-body-lock');
+        }
+    });
+}());
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
