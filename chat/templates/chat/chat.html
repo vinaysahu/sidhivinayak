@@ -144,11 +144,68 @@
         .pw-ac-drop { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 180px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 8px rgba(0,0,0,.08); }
         .pw-ac-item { padding: 7px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
         .pw-ac-item:hover { background: #eaf4ff; }
+
+        /* Hamburger button — hidden on desktop */
+        .sidebar-toggle { display: none; background: none; border: none; font-size: 22px; cursor: pointer; color: #2c3e50; padding: 0 4px; line-height: 1; }
+
+        /* Overlay backdrop for mobile sidebar */
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 99; }
+        .sidebar-overlay.visible { display: block; }
+
+        @media (max-width: 768px) {
+            /* Sidebar becomes a full-height drawer */
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0; bottom: 0;
+                width: 260px;
+                z-index: 100;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+            }
+            .sidebar.open { transform: translateX(0); }
+
+            /* Hamburger visible on mobile */
+            .sidebar-toggle { display: inline-block; }
+
+            /* Main takes full width */
+            .main { width: 100%; }
+
+            /* Header flex row */
+            .main-header { display: flex; align-items: center; gap: 10px; }
+
+            /* Messages: narrower padding, cards go full width */
+            .messages { padding: 12px 10px; }
+            .msg, .preview-card, .result-card, .error-card,
+            .inline-form, .pw-card { max-width: 100%; }
+            .input-row { max-width: 100%; }
+
+            /* Input area: tighter padding */
+            .input-area { padding: 10px 10px; }
+
+            /* Keyword chips: scroll horizontally instead of wrap */
+            .keyword-container { flex-wrap: nowrap; overflow-x: auto; padding: 8px 10px; gap: 6px; }
+            .keyword-chip { white-space: nowrap; flex-shrink: 0; }
+
+            /* Mic + send buttons slightly smaller */
+            .mic-btn, .send-btn { padding: 10px 12px; font-size: 13px; }
+
+            /* Lang toggle smaller */
+            .lang-toggle { display: none; }
+
+            /* Preview label narrower */
+            .preview-label, .form-label { width: 110px; }
+        }
+
+        @media (max-width: 420px) {
+            .sidebar { width: 80vw; }
+            .send-btn { padding: 10px 10px; }
+        }
     </style>
 </head>
 <body>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="layout">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>AI Agent</h2>
             <button class="new-chat-btn" id="newChatBtn">+ New</button>
@@ -158,7 +215,10 @@
     </aside>
 
     <main class="main">
-        <div class="main-header" id="mainHeader">Select or start a chat</div>
+        <div class="main-header" id="mainHeader">
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">&#9776;</button>
+            <span id="mainHeaderText">Select or start a chat</span>
+        </div>
         <div class="keyword-container" id="keywordContainer">
             <div class="keyword-chip" data-keyword="Project Workers">👷 Project Workers</div>
             <div class="keyword-chip" data-keyword="Project Suppliers">🚚 Project Suppliers</div>
@@ -213,7 +273,7 @@
     const micBtn = document.getElementById('micBtn');
     const newChatBtn = document.getElementById('newChatBtn');
     const langSelect = document.getElementById('langSelect');
-    const mainHeader = document.getElementById('mainHeader');
+    const mainHeader = document.getElementById('mainHeaderText');
     const keywordContainer = document.getElementById('keywordContainer');
     const suggestionHint = document.getElementById('suggestionHint');
     const suggestedKeywordEl = document.getElementById('suggestedKeyword');
@@ -1091,6 +1151,23 @@
         }
     });
     newChatBtn.addEventListener('click', newSession);
+
+    // Mobile sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    function openSidebar() {
+        sidebar.classList.add('open');
+        sidebarOverlay.classList.add('visible');
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('visible');
+    }
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+    sidebarOverlay.addEventListener('click', closeSidebar);
 
     setupRecognition();
     loadSessions();
