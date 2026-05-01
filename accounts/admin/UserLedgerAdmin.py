@@ -20,44 +20,27 @@ except Exception:
 class UserLedgerTransactionsInline(admin.TabularInline):
     model = UserLedgerTransaction
     extra = 1
-    exclude = ('created_at', 'updated_at') 
+    exclude = ('created_at', 'updated_at')
     show_change_link = True
     verbose_name = "User Ledger Transaction"
     verbose_name_plural = "User Ledger Transactions"
     template = 'admin/accounts/user_ledger/tabular_paginated.html'
-    
+
     readonly_fields = [
-        'amount_display', 'amount_words', 
-        'paid_amount_display', 'paid_amount_words', 
+        'amount_display', 'amount_words',
+        'paid_amount_display', 'paid_amount_words',
         'balance_display', 'balance_words'
     ]
-    
-    fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail'] 
+
+    fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.order_by(F('paid_on').asc(nulls_last=True))
-
-    def get_formset(self, request, obj=None, **kwargs):
-        FormSet = super().get_formset(request, obj, **kwargs)
-        
-        class PaginatedInlineFormSet(FormSet):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                # Get the base queryset and paginate it
-                qs = self.queryset
-                paginator = Paginator(qs, 15)  # 15 transactions per page
-                page_num = request.GET.get('trans_page', 1)
-                
-                try:
-                    self.page_obj = paginator.page(page_num)
-                except (PageNotAnInteger, EmptyPage):
-                    self.page_obj = paginator.page(1)
-                
-                # Replace the queryset with the sliced one for the current page
-                self.queryset = self.page_obj.object_list
-
-        return PaginatedInlineFormSet
+        # Last 5 transactions by date, displayed in ascending order
+        last_5_ids = list(
+            qs.order_by(F('paid_on').desc(nulls_last=True)).values_list('id', flat=True)[:5]
+        )
+        return qs.filter(id__in=last_5_ids).order_by(F('paid_on').asc(nulls_last=True))
 
     def amount_display(self, obj):
         if obj.id:
@@ -106,6 +89,61 @@ class UserLedgerTransactionsInline(admin.TabularInline):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
+
+class UserLedgerTransactionViewInline(admin.TabularInline):
+    model = UserLedgerTransaction
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    verbose_name = "Transaction"
+    verbose_name_plural = "Transactions View"
+    template = 'admin/accounts/user_ledger/tabular_paginated_view.html'
+
+    readonly_fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail']
+    fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.order_by(F('paid_on').asc(nulls_last=True))
+
+    def get_formset(self, request, obj=None, **kwargs):
+        FormSet = super().get_formset(request, obj, **kwargs)
+
+        class PaginatedInlineFormSet(FormSet):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                qs = self.queryset
+                paginator = Paginator(qs, 15)
+                page_num = request.GET.get('trans_page', 1)
+                try:
+                    self.page_obj = paginator.page(page_num)
+                except (PageNotAnInteger, EmptyPage):
+                    self.page_obj = paginator.page(1)
+                self.queryset = self.page_obj.object_list
+
+        return PaginatedInlineFormSet
+
+    def amount_display(self, obj):
+        if obj.id:
+            return format_indian_currency(obj.amount)
+        return "-"
+    amount_display.short_description = "Amount (Fmt)"
+
+    def amount_words(self, obj):
+        if obj.id:
+            return amount_to_words(obj.amount)
+        return "-"
+    amount_words.short_description = "Words"
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 class UserLedgerAdmin(admin.ModelAdmin):
     list_select_related = True
     list_display = ['creditor_name', 'debtor_name', 'project_id', 'formatted_amount', 'formatted_balance', 'paid_amount', 'ledger_actions' ] 
@@ -147,7 +185,7 @@ class UserLedgerAdmin(admin.ModelAdmin):
         return "-"
     paid_amount.short_description = "Paid Amount"
 
-    inlines = [UserLedgerTransactionsInline]
+    inlines = [UserLedgerTransactionsInline, UserLedgerTransactionViewInline]
     search_fields = ['amount', 'balance']
     list_filter = [TableForiegnKeyListFilter("Projects", "project_id", "name", Projects)]
 
@@ -192,9 +230,12 @@ class UserLedgerAdmin(admin.ModelAdmin):
         ledger = UserLedger.objects.select_related().get(pk=ledger_id)
 
         # Saari transactions fetch karo date ke order mein
-        transactions = UserLedgerTransaction.objects.filter(
+        transactions = list(UserLedgerTransaction.objects.filter(
             user_ledger=ledger
-        ).order_by(F('paid_on').asc(nulls_last=True))
+        ).order_by(F('paid_on').asc(nulls_last=True)))
+
+        for txn in transactions:
+            txn.formatted_amount = format_indian_currency(txn.amount)
 
         # Calculations
         paid_amount = (ledger.amount - ledger.balance) if (ledger.amount and ledger.balance) else 0

@@ -32,6 +32,7 @@ class ProjectWorkers(models.Model):
     worker_id = models.ForeignKey(Workers, on_delete=models.CASCADE, verbose_name="Worker", related_name="project_workers")
     wages_type = models.SmallIntegerField(choices=WAGES_CHOICES, default=WAGES_PER_DAY)
     wages = models.IntegerField()
+    area = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Area (Sq Ft)")
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_at = models.DateField(default=timezone.now)
     updated_at = models.DateField(auto_now=True, null=True, blank=True)

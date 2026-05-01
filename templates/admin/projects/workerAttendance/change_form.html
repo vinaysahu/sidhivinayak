@@ -1,5 +1,106 @@
 {% extends "admin/change_form.html" %}
 
+{% block content %}
+{% if project_worker %}
+<div style="background:#e8f4ff;border:1px solid #2980b9;border-radius:6px;
+            padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
+    <strong>Worker:</strong> {{ project_worker.worker_id }}&nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong>Wages Type:</strong> {{ project_worker.get_wages_type_display }}&nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong>Rate:</strong> ₹{{ project_worker.wages }}
+    {% if is_per_hour %}/hr{% endif %}
+    {% if is_per_sq_ft %}/sq ft{% endif %}
+
+    {% if is_per_sq_ft %}
+    &nbsp;&nbsp;|&nbsp;&nbsp;<strong>Area:</strong> {{ project_worker.area }} sq ft
+    &nbsp;&nbsp;|&nbsp;&nbsp;<strong>Total Contract:</strong> <span style="color:#27ae60; font-weight: bold;">₹{{ total_contract }}</span>
+    {% endif %}
+
+    {% if is_per_hour %}
+    <span style="color:#e67e22;margin-left:8px;">
+        ← Enter hours below; amount will be auto-calculated and fully paid.
+    </span>
+    {% endif %}
+</div>
+
+{% if is_per_hour %}
+<div id="hours-preview" style="background:#fff8e1;border:1px solid #f1c40f;
+     border-radius:6px;padding:10px 16px;margin-bottom:14px;font-size:13px;
+     display:none;">
+    Today Amount:&nbsp;<strong id="hours-result"
+        style="font-size:15px;color:#27ae60;">₹0</strong>
+    &nbsp;=&nbsp;<span id="hours-formula" style="color:#7f8c8d;"></span>
+</div>
+<script>
+(function () {
+    var rate = {{ project_worker.wages|default:0 }};
+    function update() {
+        var inp = document.querySelector('input[name="hours"]');
+        if (!inp) return;
+        var h = parseFloat(inp.value);
+        if (isNaN(h) || h <= 0) {
+            document.getElementById('hours-preview').style.display = 'none';
+            return;
+        }
+        var total = h * rate;
+        document.getElementById('hours-result').textContent = '₹' + total.toFixed(2);
+        document.getElementById('hours-formula').textContent =
+            h + ' hrs × ₹' + rate + '/hr';
+        document.getElementById('hours-preview').style.display = 'block';
+    }
+    function attach() {
+        var inp = document.querySelector('input[name="hours"]');
+        if (inp) {
+            inp.addEventListener('input', update);
+            inp.setAttribute('placeholder', 'e.g. 8 or 4.5');
+            update();
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attach);
+    } else { attach(); }
+})();
+</script>
+{% endif %}
+
+{% if amount_required %}
+<div style="background:#fff3cd;border:1px solid #f0ad4e;border-radius:6px;
+     padding:10px 16px;margin-bottom:14px;font-size:13px;">
+    ⚠️ <strong>Amount field is required</strong> for
+    <strong>{{ project_worker.get_wages_type_display }}</strong> wage type.
+</div>
+<script>
+(function () {
+    function markRequired() {
+        var inp = document.querySelector('input[name="paid_amount"]');
+        if (!inp) return;
+        inp.setAttribute('required', 'required');
+        inp.setAttribute('min', '0.01');
+        inp.setAttribute('placeholder', 'Required — enter amount');
+        // Add red asterisk to the label
+        var row = inp.closest('.form-row, tr, .field-paid_amount');
+        if (row) {
+            var lbl = row.querySelector('label');
+            if (lbl && !lbl.querySelector('.req-star')) {
+                var star = document.createElement('span');
+                star.className = 'req-star';
+                star.textContent = ' *';
+                star.style.color = '#c0392b';
+                star.style.fontWeight = 'bold';
+                lbl.appendChild(star);
+            }
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', markRequired);
+    } else { markRequired(); }
+})();
+</script>
+{% endif %}
+{% endif %}
+
+{{ block.super }}
+{% endblock %}
+
 {% block submit_buttons_bottom %}
     {% if request.GET.project_worker_id %}
         <div class="submit-row">

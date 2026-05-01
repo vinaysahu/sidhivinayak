@@ -13,7 +13,9 @@ class ProjectWorkerAttendances(models.Model):
     total_amount = models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)
     paid_amount = models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)
     remaining_amount = models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)
+    hours = models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True, verbose_name="Hours Worked")
     working_date = models.DateField(default=timezone.now, null=True, blank=True)
+    payment_date = models.DateField(null=True, blank=True, verbose_name="Last Payment Date")
     created_at = models.DateField(default=timezone.now)
     updated_at = models.DateField(auto_now=True, null=True, blank=True)
 

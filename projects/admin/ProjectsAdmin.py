@@ -1,17 +1,25 @@
+import json
+from decimal import Decimal, InvalidOperation
+
+from django import forms
 from django.contrib import admin
 from ..models.Projects import Projects
 from ..models.ProjectAmenities import ProjectAmenities
 from ..models.ProjectWorkers import ProjectWorkers
+from ..models.ProjectWorkerAttendances import ProjectWorkerAttendances
 from ..models.ProjectHouses import ProjectHouses
 from ..models.ProjectMedia import ProjectMedia
 from ..models.ProjectMaterials import ProjectMaterials
 from ..models.UserProjectPermissions import UserProjectPermissions
 from ..models.ProjectLedger import ProjectLedger
 from ..models.ProjectSupplierLedger import ProjectSupplierLedger
+from django.http import JsonResponse
 from django.urls import path, reverse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from django.utils.html import format_html
 from django.template.loader import render_to_string
+from django.db import transaction
 from django.db.models import Sum
 from accounts.utils import format_indian_currency
 
@@ -135,21 +143,86 @@ class ProjectSupplierLedgerInline(admin.TabularInline):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('supplier', 'project')
 
+class ProjectWorkersInlineForm(forms.ModelForm):
+    class Meta:
+        model = ProjectWorkers
+        fields = '__all__'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        wages_type = cleaned_data.get('wages_type')
+        area = cleaned_data.get('area')
+        if wages_type == ProjectWorkers.WAGES_PER_SQ_FT and (area is None or area <= 0):
+            self.add_error('area', 'Area is required and must be greater than 0 for Per SQ FT wages type.')
+        return cleaned_data
+
+
 class ProjectWorkersInline(admin.TabularInline):
     model = ProjectWorkers
+    form = ProjectWorkersInlineForm
     extra = 0
-    exclude = ('created_at', 'updated_at') 
+    exclude = ('created_at', 'updated_at')
     max_num = 5
     verbose_name = "Project Worker"
     verbose_name_plural = "Project Workers"
-    fields = ['mark_today_attendance','worker_id', 'wages_type', 'wages', 'status']
-    readonly_fields=['mark_today_attendance']
+    fields = ['mark_today_attendance', 'add_payment_action', 'worker_id', 'wages_type', 'wages', 'area', 'total_payment_display', 'status']
+    readonly_fields = ['mark_today_attendance', 'add_payment_action', 'total_payment_display']
+
+    class Media:
+        js = ('admin/js/project_worker_add_payment.js',)
+
     def mark_today_attendance(self, obj):
         if not obj or not obj.pk: return "-"
-        edit_url = reverse("admin:projects_projectworkerattendances_add")
+        
         view_url = reverse("admin:projects_projectworkerattendances_changelist")
-        return format_html('<a href="{}?project_worker_id={}" title="Mark Today Attendance"><i class="fa fa-address-card text-black"></i></a> <a class="ml-2" href="{}?project_id={}&worker_id={}" title="Attendance View"><i class="fa fa-eye text-black"></i></a> ', edit_url, obj.id, view_url, obj.project_id.id, obj.worker_id.id)
+        view_link = format_html('<a class="ml-2" href="{}?project_id={}&worker_id={}" title="Attendance View"><i class="fa fa-eye text-black"></i></a>', view_url, obj.project_id.id, obj.worker_id.id)
+
+        if obj.wages_type == ProjectWorkers.WAGES_PER_SQ_FT:
+            if obj.area is None or obj.area <= 0:
+                return format_html('<span style="color:red; font-size: 10px;">Area missing</span> {}', view_link)
+            
+            # Check if any attendance already exists for this Per SQ FT worker
+            exists = ProjectWorkerAttendances.objects.filter(project_worker_id=obj).exists()
+            if exists:
+                return format_html('<span style="color:#27ae60; font-size: 10px; font-weight:bold;">Contract Created</span> {}', view_link)
+
+        edit_url = reverse("admin:projects_projectworkerattendances_add")
+        return format_html('<a href="{}?project_worker_id={}" title="Mark Today Attendance"><i class="fa fa-address-card text-black"></i></a> {}', edit_url, obj.id, view_link)
     mark_today_attendance.short_description="Action"
+
+    def add_payment_action(self, obj):
+        if not obj or not obj.pk:
+            return "-"
+        last_att = ProjectWorkerAttendances.objects.filter(project_worker_id=obj).last()
+        if not last_att:
+            return format_html('<span style="color:#7f8c8d;font-size:11px;">No attendance yet</span>')
+        balance = last_att.remaining_amount or Decimal("0")
+        if balance <= 0:
+            return format_html('<span style="color:green;font-weight:bold;">✓ Paid up</span>')
+        url = reverse("admin:projectworker_add_payment", args=[obj.id])
+        worker_label = str(obj.worker_id)
+        return format_html(
+            '<button type="button" class="add-payment-btn button" '
+            'data-url="{}" data-balance="{}" data-worker="{}" '
+            'style="background:#27ae60;color:white;border:none;'
+            'padding:4px 10px;border-radius:4px;cursor:pointer;'
+            'font-size:12px;white-space:nowrap;">+ Add Payment '
+            '(₹{})</button>',
+            url, str(balance), worker_label, format_indian_currency(balance)
+        )
+    add_payment_action.short_description = "Add Payment"
+
+    def total_payment_display(self, obj):
+        wages = obj.wages if obj and obj.wages else 0
+        area = obj.area if obj and obj.area else 0
+        if obj and obj.pk and obj.wages_type == ProjectWorkers.WAGES_PER_SQ_FT and area:
+            total = Decimal(str(wages)) * area
+            return format_html(
+                '<span class="pw-total-display" style="color:#27ae60;font-weight:bold;">₹{}</span>',
+                total
+            )
+        return format_html('<span class="pw-total-display">—</span>')
+    total_payment_display.short_description = "Total Payment"
 
 class ProjectHouseInline(admin.TabularInline):
     model = ProjectHouses
@@ -261,8 +334,70 @@ class ProjectsAdmin(admin.ModelAdmin):
             path("<path:object_id>/view/", self.admin_site.admin_view(self.project_view_page), name="project_view"),
             path("duplicate-house/<int:house_id>/", self.admin_site.admin_view(self.duplicate_house), name="projecthouse_duplicate"),
             path("worker-attendance/<int:project_id>/", self.admin_site.admin_view(self.project_worker_attendance_page), name="projects_worker_attendance"),
+            path("project-worker/<int:project_worker_id>/add-payment/", self.admin_site.admin_view(self.add_payment_view), name="projectworker_add_payment"),
         ]
         return custom_urls + urls
+
+    def add_payment_view(self, request, project_worker_id):
+        """Apply an extra payment to the LATEST ProjectWorkerAttendances row
+        of the given ProjectWorker. Increments paid_amount, recomputes
+        remaining_amount, and stamps payment_date with today's date.
+        Validates that the payment does not exceed the outstanding balance
+        (i.e. last attendance's remaining_amount)."""
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
+
+        try:
+            body = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        try:
+            amount = Decimal(str(body.get("amount", "")).strip())
+        except (InvalidOperation, TypeError):
+            return JsonResponse({"error": "Invalid amount"}, status=400)
+
+        if amount <= 0:
+            return JsonResponse({"error": "Amount must be greater than 0"}, status=400)
+
+        project_worker = get_object_or_404(ProjectWorkers, pk=project_worker_id)
+
+        with transaction.atomic():
+            last_att = (
+                ProjectWorkerAttendances.objects
+                .select_for_update()
+                .filter(project_worker_id=project_worker)
+                .order_by("id")
+                .last()
+            )
+            if not last_att:
+                return JsonResponse(
+                    {"error": "No attendance entry exists yet for this worker. Mark attendance first."},
+                    status=400,
+                )
+
+            balance = last_att.remaining_amount or Decimal("0")
+            if amount > balance:
+                return JsonResponse(
+                    {"error": f"Payment ₹{amount} balance ₹{balance} se zyada nahi ho sakta"},
+                    status=400,
+                )
+
+            last_att.paid_amount = (last_att.paid_amount or Decimal("0")) + amount
+            last_att.remaining_amount = (last_att.total_amount or Decimal("0")) - last_att.paid_amount
+            last_att.payment_date = timezone.now().date()
+            last_att.save(update_fields=["paid_amount", "remaining_amount", "payment_date", "updated_at"])
+
+        return JsonResponse({
+            "ok": True,
+            "message": (
+                f"Payment ₹{amount} added to {project_worker.worker_id}. "
+                f"New paid: ₹{last_att.paid_amount}, balance: ₹{last_att.remaining_amount}."
+            ),
+            "new_paid_amount": str(last_att.paid_amount),
+            "new_remaining": str(last_att.remaining_amount),
+            "payment_date": last_att.payment_date.isoformat(),
+        })
     
     def duplicate_house(self, request, house_id):
         original = get_object_or_404(ProjectHouses, pk=house_id)

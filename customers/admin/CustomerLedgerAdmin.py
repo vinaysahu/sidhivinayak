@@ -113,7 +113,7 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
     ]
 
     exclude = ('created_at', 'updated_at')
-    readonly_fields = ['paid_amount']
+    readonly_fields = ['paid_amount', 'balance']
 
     list_per_page = 15          # ← yeh add karo
     list_max_show_all = 100     # ← yeh add karo
@@ -219,9 +219,12 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
         ledger = CustomerLedger.objects.select_related().get(pk=ledger_id)
 
         # Saari transactions fetch karo date ke order mein
-        transactions = CustomerLedgerTransaction.objects.filter(
+        transactions = list(CustomerLedgerTransaction.objects.filter(
             customer_ledger=ledger
-        ).order_by(F('paid_on').asc(nulls_last=True))
+        ).order_by(F('paid_on').asc(nulls_last=True)))
+
+        for txn in transactions:
+            txn.formatted_amount = format_indian_currency(txn.amount)
 
         # Calculations
         paid_amount = (ledger.amount - ledger.balance) if (ledger.amount and ledger.balance) else 0

@@ -1,0 +1,3059 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Agent - SVED</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; color: #222; height: 100vh; overflow: hidden; }
+        .layout { display: flex; height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: 280px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid #3a5068; display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 16px; }
+        .new-chat-btn { background: #27ae60; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .new-chat-btn:hover { background: #219150; }
+        .session-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .session-item { padding: 10px 16px; cursor: pointer; border-left: 3px solid transparent; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .session-item:hover { background: #34495e; }
+        .session-item.active { background: #34495e; border-left-color: #27ae60; }
+        .back-link { padding: 12px 16px; border-top: 1px solid #3a5068; font-size: 12px; color: #bdc3c7; text-decoration: none; }
+        .back-link:hover { color: #fff; }
+
+        /* Main */
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .main-header { padding: 14px 20px; background: #fff; border-bottom: 1px solid #e1e4e8; font-weight: 600; }
+        .messages { flex: 1; overflow-y: auto; padding: 20px; }
+        .empty-state { text-align: center; color: #7f8c8d; margin-top: 60px; font-size: 14px; }
+        .empty-state strong { display: block; margin-bottom: 8px; color: #34495e; font-size: 18px; }
+
+        .msg { max-width: 720px; margin: 0 auto 14px; padding: 12px 16px; border-radius: 8px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+        .msg.user { background: #d6eaff; }
+        .msg.assistant { background: #fff; border: 1px solid #e1e4e8; }
+        .msg-role { font-size: 11px; text-transform: uppercase; color: #7f8c8d; margin-bottom: 4px; font-weight: 600; }
+
+        /* Pending preview card */
+        .preview-card { max-width: 720px; margin: 0 auto 14px; padding: 16px; background: #fffbe6; border: 1px solid #f1c40f; border-radius: 8px; }
+        .preview-card h3 { font-size: 14px; margin-bottom: 12px; color: #b7950b; }
+        .preview-row { display: flex; margin-bottom: 8px; font-size: 13px; }
+        .preview-label { width: 140px; font-weight: 600; color: #555; }
+        .preview-value { flex: 1; }
+        .preview-value input, .preview-value select { width: 100%; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        .preview-actions { margin-top: 14px; display: flex; gap: 8px; }
+        .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-confirm { background: #27ae60; color: #fff; }
+        .btn-confirm:hover { background: #219150; }
+        .btn-cancel { background: #e74c3c; color: #fff; }
+        .btn-cancel:hover { background: #c0392b; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .result-card { max-width: 720px; margin: 0 auto 14px; padding: 12px 16px; background: #d4edda; border: 1px solid #28a745; border-radius: 8px; color: #155724; }
+        .error-card { max-width: 720px; margin: 0 auto 14px; padding: 12px 16px; background: #f8d7da; border: 1px solid #dc3545; border-radius: 8px; color: #721c24; }
+
+        /* Input area */
+        .input-area { padding: 14px 20px; background: #fff; border-top: 1px solid #e1e4e8; }
+        .input-row { max-width: 720px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+        .input-row textarea { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; resize: none; font-family: inherit; font-size: 14px; min-height: 44px; max-height: 160px; }
+        .mic-btn, .send-btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .mic-btn { background: #95a5a6; color: #fff; }
+        .mic-btn.recording { background: #e74c3c; animation: pulse 1s infinite; }
+        .mic-btn:hover { background: #7f8c8d; }
+        .send-btn { background: #2980b9; color: #fff; }
+        .send-btn:hover { background: #1f618d; }
+        .send-btn:disabled, .mic-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+        .lang-toggle { font-size: 12px; color: #7f8c8d; margin-right: 8px; }
+        .lang-toggle select { padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+
+        .typing { font-style: italic; color: #7f8c8d; padding: 10px 16px; }
+
+        /* Inline form (used for chat-driven shortcuts like Customer Txn) */
+        .inline-form { max-width: 720px; margin: 0 auto 14px; padding: 16px; background: #eaf4ff; border: 1px solid #2980b9; border-radius: 8px; }
+        .inline-form h3 { font-size: 14px; margin-bottom: 12px; color: #1f618d; }
+        .form-row { display: flex; margin-bottom: 10px; font-size: 13px; align-items: flex-start; }
+        .form-label { width: 140px; font-weight: 600; color: #555; padding-top: 6px; flex-shrink: 0; }
+        .form-field { flex: 1; position: relative; }
+        .form-field input, .form-field select, .form-field textarea { width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit; }
+        .form-field textarea { resize: vertical; min-height: 36px; }
+        .form-field .hint { font-size: 11px; color: #7f8c8d; margin-top: 2px; display: block; }
+        .form-field .hint.error { color: #c0392b; }
+
+        /* Autocomplete dropdown */
+        .ac-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 220px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+        .ac-item { padding: 6px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .ac-item:last-child { border-bottom: none; }
+        .ac-item:hover, .ac-item.active { background: #d6eaff; }
+        .ac-item .ac-sub { font-size: 11px; color: #7f8c8d; }
+        .ac-empty { padding: 6px 10px; font-size: 12px; color: #7f8c8d; font-style: italic; }
+
+        /* Quick Keywords Chips */
+        .keyword-container { padding: 10px 20px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; gap: 8px; flex-wrap: wrap; }
+        .keyword-chip { background: #f0f2f5; border: 1px solid #ddd; border-radius: 20px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: #555; transition: all 0.2s; }
+        .keyword-chip:hover { background: #e4e6e9; border-color: #ccc; color: #222; }
+        
+        /* Suggestion Hint */
+        .suggestion-hint { padding: 8px 20px; background: #fff8e1; border-top: 1px solid #ffe58f; font-size: 12px; color: #856404; display: none; }
+        .suggestion-hint strong { cursor: pointer; text-decoration: underline; color: #b7950b; }
+
+        /* Project Workers chatbot styles */
+        .pw-card { max-width: 720px; margin: 0 auto 14px; padding: 16px; background: #f0faf4; border: 1px solid #27ae60; border-radius: 8px; }
+        .pw-card h3 { font-size: 14px; margin-bottom: 12px; color: #1e8449; font-weight: 700; }
+        .pw-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .pw-opt-btn { background: #27ae60; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .pw-opt-btn:hover { background: #1e8449; }
+        .pw-opt-btn.secondary { background: #2980b9; }
+        .pw-opt-btn.secondary:hover { background: #1a6fa0; }
+        .pw-opt-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pw-search { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; margin-bottom: 10px; font-family: inherit; }
+        .pw-list { max-height: 260px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; }
+        .pw-list-item { padding: 9px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .pw-list-item:last-child { border-bottom: none; }
+        .pw-list-item:hover { background: #eaf4ff; }
+        .pw-list-item.selected { background: #d4edda; }
+        .pw-list-item input[type=checkbox] { accent-color: #27ae60; width: 16px; height: 16px; flex-shrink: 0; }
+        .pw-list-item .pw-sub { font-size: 11px; color: #7f8c8d; margin-left: auto; }
+        .pw-wages-input { width: 90px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+        .pw-detail-box { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; }
+        .pw-detail-box .pw-detail-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .pw-detail-box .pw-detail-row span:first-child { color: #555; font-weight: 600; }
+        .pw-amount-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .pw-amount-row label { font-size: 13px; font-weight: 600; color: #333; width: 130px; flex-shrink: 0; }
+        .pw-amount-row input { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+        .pw-form-group { margin-bottom: 10px; }
+        .pw-form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+        .pw-form-group input, .pw-form-group select { width: 100%; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; font-family: inherit; }
+        .pw-back-btn { background: none; border: none; color: #2980b9; font-size: 12px; cursor: pointer; padding: 0; margin-bottom: 10px; text-decoration: underline; }
+        .pw-total-hint { font-size: 12px; color: #27ae60; font-weight: 600; margin-left: 8px; }
+        .pw-empty { font-size: 13px; color: #7f8c8d; font-style: italic; padding: 10px 0; }
+
+        /* Supplier chatbot tabs */
+        .pw-tabs { display: flex; gap: 0; margin-bottom: 10px; border-bottom: 2px solid #ddd; }
+        .pw-tab { padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; color: #7f8c8d; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .pw-tab.active { color: #2980b9; border-bottom-color: #2980b9; }
+        .pw-tab-panel { display: none; }
+        .pw-tab-panel.active { display: block; }
+        .pw-payment-item { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+        .pw-payment-item:last-child { border-bottom: none; }
+        .pw-payment-item .pw-pay-row { display: flex; justify-content: space-between; }
+        .pw-payment-item .pw-pay-sub { color: #7f8c8d; margin-top: 2px; }
+        .pw-ac-wrap { position: relative; }
+        .pw-ac-drop { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; max-height: 180px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 8px rgba(0,0,0,.08); }
+        .pw-ac-item { padding: 7px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .pw-ac-item:hover { background: #eaf4ff; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>AI Agent</h2>
+            <button class="new-chat-btn" id="newChatBtn">+ New</button>
+        </div>
+        <div class="session-list" id="sessionList"></div>
+        <a class="back-link" href="/admin/">&larr; Back to Admin</a>
+    </aside>
+
+    <main class="main">
+        <div class="main-header" id="mainHeader">Select or start a chat</div>
+        <div class="keyword-container" id="keywordContainer">
+            <div class="keyword-chip" data-keyword="Project Workers">👷 Project Workers</div>
+            <div class="keyword-chip" data-keyword="Project Suppliers">🚚 Project Suppliers</div>
+            <div class="keyword-chip" data-keyword="Customer Ledger">👥 Customer Ledger</div>
+            <div class="keyword-chip" data-keyword="User Ledger">💳 User Ledger</div>
+        </div>
+        <div class="messages" id="messages">
+            <div class="empty-state">
+                <strong>Welcome to the AI Agent</strong>
+                Bolo ya likho — main yeh sab kaam kar sakta hoon:<br><br>
+                • Customer ledger transaction add karna<br>
+                • Supplier payment record karna<br>
+                • Worker attendance + wage record karna<br>
+                • Customer balance / project kharcha / supplier pending pooch sakte ho<br><br>
+                Example: "Lokesh ke ledger mein 50000 add karo aaj ki, Sunil Sahu ke kehne pe carpenter ko diye"<br>
+                Example: "Ramesh hardware ko 50000 cash mein de diya project Sunshine se"<br>
+                Example: "Project Aashirwad ka is mahine ka kharcha kitna hua?"
+            </div>
+        </div>
+        <div class="suggestion-hint" id="suggestionHint">
+            Kya aap <strong id="suggestedKeyword"></strong> ke baare mein baat kar rahe hain? Use karne ke liye click karein.
+        </div>
+        <div class="input-area">
+            <div class="input-row">
+                <span class="lang-toggle">
+                    Mic:
+                    <select id="langSelect">
+                        <option value="hi-IN">Hindi</option>
+                        <option value="en-IN">English (IN)</option>
+                        <option value="en-US">English (US)</option>
+                    </select>
+                </span>
+                <textarea id="input" placeholder="Type or click mic to speak..." rows="1"></textarea>
+                <button class="mic-btn" id="micBtn" title="Click to start/stop recording">🎤</button>
+                <button class="send-btn" id="sendBtn">Send</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+(function() {
+    const csrftoken = document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+    let currentSession = null;
+    let recognition = null;
+    let isRecording = false;
+
+    const sessionListEl = document.getElementById('sessionList');
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const langSelect = document.getElementById('langSelect');
+    const mainHeader = document.getElementById('mainHeader');
+    const keywordContainer = document.getElementById('keywordContainer');
+    const suggestionHint = document.getElementById('suggestionHint');
+    const suggestedKeywordEl = document.getElementById('suggestedKeyword');
+
+    // -----------------------------------------------------------------
+    // Keyword Chips & Suggestions
+    // -----------------------------------------------------------------
+    const KEYWORD_MAP = [
+        {
+            label: 'Project Workers',
+            triggers: ['project k workers', 'workers ki attendance', 'worker payment', 'worker', 'attendance', 'haziri']
+        },
+        {
+            label: 'Project Supplier',
+            triggers: ['supplier', 'project supplier', 'supplier ledger', 'vendor']
+        },
+        {
+            label: 'Customer Ledger',
+            triggers: ['customer ledger', 'customer amount', 'customer payment', 'grahak']
+        },
+        {
+            label: 'User Ledger',
+            triggers: ['accounts', 'user ledger', 'user amount', 'user payment', 'staff']
+        }
+    ];
+
+    keywordContainer.addEventListener('click', (e) => {
+        const chip = e.target.closest('.keyword-chip');
+        if (chip) {
+            inputEl.value = chip.dataset.keyword;
+            inputEl.focus();
+            suggestionHint.style.display = 'none';
+        }
+    });
+
+    suggestedKeywordEl.addEventListener('click', () => {
+        inputEl.value = suggestedKeywordEl.textContent;
+        inputEl.focus();
+        suggestionHint.style.display = 'none';
+    });
+
+    function checkSuggestions(text) {
+        const lower = text.toLowerCase();
+        if (!lower || lower.length < 3) {
+            suggestionHint.style.display = 'none';
+            return;
+        }
+
+        for (const item of KEYWORD_MAP) {
+            for (const trigger of item.triggers) {
+                if (lower.includes(trigger) && lower !== item.label.toLowerCase()) {
+                    suggestedKeywordEl.textContent = item.label;
+                    suggestionHint.style.display = 'block';
+                    return;
+                }
+            }
+        }
+        suggestionHint.style.display = 'none';
+    }
+
+    inputEl.addEventListener('input', () => {
+        checkSuggestions(inputEl.value);
+    });
+
+    async function api(url, opts = {}) {
+        const res = await fetch(url, {
+            ...opts,
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+                ...(opts.headers || {}),
+            },
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            let msg = text || res.statusText;
+            try {
+                const j = JSON.parse(text);
+                if (j.error) {
+                    if (typeof j.error === 'string') {
+                        msg = j.error;
+                    } else if (typeof j.error === 'object') {
+                        msg = Object.entries(j.error)
+                            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+                            .join('\n');
+                    }
+                }
+            } catch (_) {}
+            throw new Error(msg);
+        }
+        return res.json();
+    }
+
+    async function loadSessions() {
+        const data = await api('/chat/api/sessions/');
+        sessionListEl.innerHTML = '';
+        data.sessions.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'session-item' + (currentSession === s.id ? ' active' : '');
+            div.textContent = s.title;
+            div.onclick = () => openSession(s.id);
+            sessionListEl.appendChild(div);
+        });
+    }
+
+    function extractText(content) {
+        if (typeof content === 'string') return content;
+        if (!Array.isArray(content)) return '';
+        return content
+            .filter(b => b.type === 'text')
+            .map(b => b.text)
+            .join('\n');
+    }
+
+    function renderMessages(messages, pending) {
+        messagesEl.innerHTML = '';
+        messages.forEach(m => {
+            if (m.role === 'tool') return;
+            const text = extractText(m.content);
+            if (!text) return;
+            const div = document.createElement('div');
+            div.className = 'msg ' + m.role;
+            div.innerHTML = '<div class="msg-role">' + m.role + '</div>' + escapeHtml(text);
+            messagesEl.appendChild(div);
+        });
+        if (pending && pending.length) {
+            pending.forEach(p => renderPreviewCard(p));
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function buildCustomerTxnBody(p) {
+        return `
+            <div class="preview-row"><div class="preview-label">Customer</div><div class="preview-value">${escapeHtml(p.customer_name)}</div></div>
+            <div class="preview-row"><div class="preview-label">Project / House</div><div class="preview-value">${escapeHtml(p.project)} / ${escapeHtml(p.house)}</div></div>
+            <div class="preview-row"><div class="preview-label">Amount (Rs.)</div><div class="preview-value"><input type="number" step="0.01" name="amount" value="${escapeHtml(p.amount)}"></div></div>
+            <div class="preview-row"><div class="preview-label">Payment Type</div><div class="preview-value">
+                <select name="payment_type">
+                    <option value="credited" ${p.payment_type === 'credited' ? 'selected' : ''}>Credited (customer paid / paid on customer's behalf)</option>
+                    <option value="debited" ${p.payment_type === 'debited' ? 'selected' : ''}>Debited (refund to customer)</option>
+                </select>
+            </div></div>
+            <div class="preview-row"><div class="preview-label">Date</div><div class="preview-value"><input type="date" name="paid_on" value="${escapeHtml(p.paid_on)}"></div></div>
+            <div class="preview-row"><div class="preview-label">Paid To (User)</div><div class="preview-value">${escapeHtml(p.paid_to_name)}</div></div>
+            <div class="preview-row"><div class="preview-label">Detail</div><div class="preview-value"><input type="text" name="detail" value="${escapeHtml(p.detail || '')}"></div></div>
+        `;
+    }
+
+    function buildSupplierPaymentBody(p) {
+        const balanceLine = `Bill Rs. ${escapeHtml(p.ledger_total)} • Paid Rs. ${escapeHtml(p.ledger_paid)} • Pending Rs. ${escapeHtml(p.ledger_balance)}`;
+        return `
+            <div class="preview-row"><div class="preview-label">Supplier</div><div class="preview-value">${escapeHtml(p.supplier)}</div></div>
+            <div class="preview-row"><div class="preview-label">Project</div><div class="preview-value">${escapeHtml(p.project)}</div></div>
+            <div class="preview-row"><div class="preview-label">Item / Ledger</div><div class="preview-value">${escapeHtml(p.item_description)}<br><small style="color:#888">${balanceLine}</small></div></div>
+            <div class="preview-row"><div class="preview-label">Payment (Rs.)</div><div class="preview-value"><input type="number" step="0.01" name="payment_amount" value="${escapeHtml(p.payment_amount)}"></div></div>
+            <div class="preview-row"><div class="preview-label">Date</div><div class="preview-value"><input type="date" name="payment_date" value="${escapeHtml(p.payment_date)}"></div></div>
+            <div class="preview-row"><div class="preview-label">Mode</div><div class="preview-value">
+                <select name="payment_mode">
+                    <option value="cash" ${p.payment_mode === 'cash' ? 'selected' : ''}>Cash</option>
+                    <option value="cheque" ${p.payment_mode === 'cheque' ? 'selected' : ''}>Cheque</option>
+                    <option value="online" ${p.payment_mode === 'online' ? 'selected' : ''}>Online</option>
+                    <option value="bank_transfer" ${p.payment_mode === 'bank_transfer' ? 'selected' : ''}>Bank Transfer</option>
+                </select>
+            </div></div>
+            <div class="preview-row"><div class="preview-label">Reference #</div><div class="preview-value"><input type="text" name="reference_number" value="${escapeHtml(p.reference_number || '')}"></div></div>
+            <div class="preview-row"><div class="preview-label">Notes</div><div class="preview-value"><input type="text" name="notes" value="${escapeHtml(p.notes || '')}"></div></div>
+        `;
+    }
+
+    function buildWorkerAttendanceBody(p) {
+        const wagesLine = `Default: ${escapeHtml(p.wages_type)} @ Rs. ${escapeHtml(p.wages)}`;
+        return `
+            <div class="preview-row"><div class="preview-label">Worker</div><div class="preview-value">${escapeHtml(p.worker)}<br><small style="color:#888">${wagesLine}</small></div></div>
+            <div class="preview-row"><div class="preview-label">Project</div><div class="preview-value">${escapeHtml(p.project)}</div></div>
+            <div class="preview-row"><div class="preview-label">Working Date</div><div class="preview-value"><input type="date" name="working_date" value="${escapeHtml(p.working_date)}"></div></div>
+            <div class="preview-row"><div class="preview-label">Total Wage (Rs.)</div><div class="preview-value"><input type="number" step="0.01" name="total_amount" value="${escapeHtml(p.total_amount)}"></div></div>
+            <div class="preview-row"><div class="preview-label">Paid Today (Rs.)</div><div class="preview-value"><input type="number" step="0.01" name="paid_amount" value="${escapeHtml(p.paid_amount)}"></div></div>
+        `;
+    }
+
+    function previewTitle(kind) {
+        if (kind === 'supplier_payment') return '📋 Supplier Payment - Confirm to save';
+        if (kind === 'worker_attendance') return '📋 Worker Attendance - Confirm to save';
+        return '📋 Customer Transaction - Confirm to save';
+    }
+
+    function renderPreviewCard(pending) {
+        const p = pending.payload || {};
+        const kind = pending.kind || p.kind || 'customer_txn';
+        const card = document.createElement('div');
+        card.className = 'preview-card';
+        card.dataset.pendingId = pending.id;
+        card.dataset.kind = kind;
+
+        let body;
+        if (kind === 'supplier_payment') body = buildSupplierPaymentBody(p);
+        else if (kind === 'worker_attendance') body = buildWorkerAttendanceBody(p);
+        else body = buildCustomerTxnBody(p);
+
+        card.innerHTML = `
+            <h3>${previewTitle(kind)}</h3>
+            ${body}
+            <div class="preview-actions">
+                <button class="btn btn-confirm">✓ Confirm & Save</button>
+                <button class="btn btn-cancel">✗ Cancel</button>
+            </div>
+        `;
+        card.querySelector('.btn-confirm').onclick = () => confirmPending(card, pending.id, kind);
+        card.querySelector('.btn-cancel').onclick = () => cancelPending(card, pending.id);
+        messagesEl.appendChild(card);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function collectOverrides(card, kind) {
+        const fieldMap = {
+            customer_txn: ['amount', 'payment_type', 'paid_on', 'detail'],
+            supplier_payment: ['payment_amount', 'payment_date', 'payment_mode', 'reference_number', 'notes'],
+            worker_attendance: ['working_date', 'total_amount', 'paid_amount'],
+        };
+        const fields = fieldMap[kind] || fieldMap.customer_txn;
+        const overrides = {};
+        fields.forEach(f => {
+            const el = card.querySelector(`[name=${f}]`);
+            if (el) overrides[f] = el.value;
+        });
+        return overrides;
+    }
+
+    async function confirmPending(card, pendingId, kind) {
+        const overrides = collectOverrides(card, kind);
+        const buttons = card.querySelectorAll('button');
+        buttons.forEach(b => b.disabled = true);
+        try {
+            const res = await api(`/chat/api/pending/${pendingId}/confirm/`, {
+                method: 'POST',
+                body: JSON.stringify({ overrides }),
+            });
+            const result = document.createElement('div');
+            result.className = 'result-card';
+            result.textContent = '✓ ' + res.message;
+            card.replaceWith(result);
+        } catch (e) {
+            alert('Failed to save: ' + e.message);
+            buttons.forEach(b => b.disabled = false);
+        }
+    }
+
+    async function cancelPending(card, pendingId) {
+        if (!confirm('Cancel this transaction proposal?')) return;
+        try {
+            await api(`/chat/api/pending/${pendingId}/cancel/`, { method: 'POST' });
+            card.remove();
+        } catch (e) {
+            alert('Failed to cancel: ' + e.message);
+        }
+    }
+
+    async function openSession(sessionId) {
+        currentSession = sessionId;
+        const data = await api(`/chat/api/sessions/${sessionId}/`);
+        mainHeader.textContent = data.title;
+        renderMessages(data.messages, data.pending_transactions);
+        await loadSessions();
+    }
+
+    async function newSession() {
+        const data = await api('/chat/api/sessions/new/', { method: 'POST' });
+        currentSession = data.id;
+        mainHeader.textContent = data.title;
+        messagesEl.innerHTML = '';
+        await loadSessions();
+    }
+
+    // Quick shortcuts — short commands that open the admin form directly,
+    // bypassing the AI agent (no API call). Order matters: list more
+    // specific phrases first so they win over broader keywords.
+    const FORM_SHORTCUTS = [
+        // Project Workers chatbot flow
+        {
+            keywords: ['project workers'],
+            inline: 'project-workers',
+            label: 'Project Workers',
+        },
+        // Project Suppliers chatbot flow
+        {
+            keywords: ['project suppliers', 'project supplier'],
+            inline: 'project-suppliers',
+            label: 'Project Suppliers',
+        },
+        // User Ledger chatbot flow
+        {
+            keywords: ['user ledger'],
+            inline: 'user-ledger',
+            label: 'User Ledger',
+        },
+        // More-specific "create new ledger" must come BEFORE the generic
+        // "customer ledger" so that 'naya customer ledger' wins.
+        {
+            keywords: [
+                'naya customer ledger', 'new customer ledger',
+                'create customer ledger', 'naya ledger', 'new ledger',
+            ],
+            url: '/admin/customers/customerledger/add/',
+            label: 'Customer Ledger (new)',
+        },
+        {
+            keywords: [
+                'customer ledger transaction', 'customer transaction',
+                'customer entry', 'customer payment', 'customer ledger',
+                'grahak transaction', 'grahak payment',
+            ],
+            inline: 'customer-txn',
+            label: 'Customer Ledger Transaction',
+        },
+        {
+            keywords: [
+                'supplier payment', 'supplier ledger', 'supplier entry',
+                'vendor payment', 'vendor ledger',
+            ],
+            url: '/admin/projects/projectsupplierledger/add/',
+            label: 'Supplier Ledger / Payment',
+        },
+        {
+            keywords: [
+                'worker attendance', 'attendance', 'haziri', 'hazri',
+                'mistri attendance', 'majdoor attendance',
+            ],
+            url: '/admin/projects/projectworkerattendances/add/',
+            label: 'Worker Attendance',
+        },
+    ];
+
+    function detectShortcut(text) {
+        const lower = text.toLowerCase().trim().replace(/[?.,!]/g, '');
+        // Only short inputs (<= 6 words) are treated as commands; longer
+        // sentences go to the AI so natural conversation isn't hijacked.
+        if (lower.split(/\s+/).length > 6) return null;
+        for (const sc of FORM_SHORTCUTS) {
+            for (const kw of sc.keywords) {
+                if (lower.includes(kw)) return sc;
+            }
+        }
+        return null;
+    }
+
+    function showShortcutMessage(userText, sc) {
+        const empty = messagesEl.querySelector('.empty-state');
+        if (empty) empty.remove();
+
+        const userDiv = document.createElement('div');
+        userDiv.className = 'msg user';
+        userDiv.innerHTML = '<div class="msg-role">user</div>' + escapeHtml(userText);
+        messagesEl.appendChild(userDiv);
+
+        const assistDiv = document.createElement('div');
+        assistDiv.className = 'msg assistant';
+        assistDiv.innerHTML = '<div class="msg-role">assistant</div>' +
+            '<strong>' + escapeHtml(sc.label) + '</strong> form naye tab mein khul gaya. ' +
+            'Agar popup block ho gaya ho toh ' +
+            '<a href="' + sc.url + '" target="_blank">yahan click karo</a>.';
+        messagesEl.appendChild(assistDiv);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        // Frontend shortcut: if input is a short form-open command, render
+        // an inline form (or open the admin add page) directly — no API
+        // call, no Gemini round-trip.
+        const shortcut = detectShortcut(text);
+        if (shortcut) {
+            inputEl.value = '';
+            if (shortcut.inline === 'customer-txn') {
+                renderUserMessage(text);
+                renderCustomerTxnForm();
+            } else if (shortcut.inline === 'project-workers') {
+                renderUserMessage(text);
+                renderProjectWorkersOptions();
+            } else if (shortcut.inline === 'project-suppliers') {
+                renderUserMessage(text);
+                renderProjectSuppliersOptions();
+            } else if (shortcut.inline === 'user-ledger') {
+                renderUserMessage(text);
+                renderUserLedgerOptions();
+            } else if (shortcut.url) {
+                showShortcutMessage(text, shortcut);
+                window.open(shortcut.url, '_blank');
+            }
+            return;
+        }
+
+        // Context-aware: long message with ledger/transaction keywords
+        if (isContextMessage(text)) {
+            inputEl.value = '';
+            renderUserMessage(text);
+            handleContextMessage(text);
+            return;
+        }
+
+        if (!currentSession) {
+            await newSession();
+        }
+
+        // Show user message immediately
+        const userDiv = document.createElement('div');
+        userDiv.className = 'msg user';
+        userDiv.innerHTML = '<div class="msg-role">user</div>' + escapeHtml(text);
+        messagesEl.appendChild(userDiv);
+
+        const typing = document.createElement('div');
+        typing.className = 'typing';
+        typing.textContent = 'AI agent soch raha hai...';
+        messagesEl.appendChild(typing);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        inputEl.value = '';
+        sendBtn.disabled = true;
+
+        try {
+            const res = await api(`/chat/api/sessions/${currentSession}/send/`, {
+                method: 'POST',
+                body: JSON.stringify({ text }),
+            });
+            typing.remove();
+            if (res.assistant_text) {
+                const div = document.createElement('div');
+                div.className = 'msg assistant';
+                div.innerHTML = '<div class="msg-role">assistant</div>' + escapeHtml(res.assistant_text);
+                messagesEl.appendChild(div);
+            }
+            if (res.pending_transaction) {
+                renderPreviewCard(res.pending_transaction);
+            }
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            await loadSessions();
+        } catch (e) {
+            typing.remove();
+            const errDiv = document.createElement('div');
+            errDiv.className = 'error-card';
+            errDiv.textContent = 'Error: ' + e.message;
+            messagesEl.appendChild(errDiv);
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Inline Customer Ledger Transaction form
+    // -----------------------------------------------------------------
+    function renderUserMessage(text) {
+        const empty = messagesEl.querySelector('.empty-state');
+        if (empty) empty.remove();
+        const div = document.createElement('div');
+        div.className = 'msg user';
+        div.innerHTML = '<div class="msg-role">user</div>' + escapeHtml(text);
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function debounce(fn, ms) {
+        let t = null;
+        return function(...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), ms);
+        };
+    }
+
+    /**
+     * Attach autocomplete to a text input. `searchFn(query)` must return
+     * an array of items. `formatItem(item)` returns DOM contents to show.
+     * `onSelect(item)` is called when the user picks one.
+     */
+    function attachAutocomplete(input, dropdown, searchFn, formatItem, onSelect) {
+        let items = [];
+        let activeIdx = -1;
+
+        function close() {
+            dropdown.style.display = 'none';
+            activeIdx = -1;
+        }
+
+        function highlight(idx) {
+            const nodes = dropdown.querySelectorAll('.ac-item');
+            nodes.forEach((n, i) => n.classList.toggle('active', i === idx));
+            activeIdx = idx;
+        }
+
+        const doSearch = debounce(async () => {
+            const q = input.value.trim();
+            if (!q) { close(); return; }
+            try {
+                items = await searchFn(q);
+                dropdown.innerHTML = '';
+                if (!items.length) {
+                    dropdown.innerHTML = '<div class="ac-empty">Koi match nahi mila</div>';
+                    dropdown.style.display = 'block';
+                    return;
+                }
+                items.forEach((item, i) => {
+                    const node = document.createElement('div');
+                    node.className = 'ac-item';
+                    node.innerHTML = formatItem(item);
+                    node.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        onSelect(item);
+                        close();
+                    });
+                    dropdown.appendChild(node);
+                });
+                dropdown.style.display = 'block';
+            } catch (e) {
+                console.error('autocomplete search failed', e);
+            }
+        }, 250);
+
+        input.addEventListener('input', doSearch);
+        input.addEventListener('focus', () => {
+            if (input.value.trim()) doSearch();
+        });
+        input.addEventListener('blur', () => {
+            // small delay so click events on dropdown items still fire
+            setTimeout(close, 150);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (dropdown.style.display !== 'block' || !items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                highlight((activeIdx + 1) % items.length);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                highlight((activeIdx - 1 + items.length) % items.length);
+            } else if (e.key === 'Enter') {
+                if (activeIdx >= 0) {
+                    e.preventDefault();
+                    onSelect(items[activeIdx]);
+                    close();
+                }
+            } else if (e.key === 'Escape') {
+                close();
+            }
+        });
+    }
+
+    function todayIso() {
+        const d = new Date();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    function renderCustomerTxnForm() {
+        const card = document.createElement('div');
+        card.className = 'inline-form';
+        card.innerHTML = `
+            <h3>📝 Customer Ledger Transaction</h3>
+            <div class="form-row">
+                <div class="form-label">Customer</div>
+                <div class="form-field">
+                    <input type="text" name="customer" placeholder="Customer ka naam type karo..." autocomplete="off">
+                    <div class="ac-dropdown" data-for="customer"></div>
+                    <span class="hint" data-hint="customer">Search karke select karo</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-label">Project / House</div>
+                <div class="form-field">
+                    <select name="ledger" disabled>
+                        <option value="">Pehle customer select karo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-label">Amount (Rs.)</div>
+                <div class="form-field">
+                    <input type="number" step="0.01" name="amount" placeholder="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-label">Payment Type</div>
+                <div class="form-field">
+                    <select name="payment_type">
+                        <option value="credited">Credited (customer ne paid / customer ke behalf paid)</option>
+                        <option value="debited">Debited (customer ko refund)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-label">Date</div>
+                <div class="form-field">
+                    <input type="date" name="paid_on" value="${todayIso()}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-label">Paid To (User)</div>
+                <div class="form-field">
+                    <input type="text" name="paid_to" placeholder="Staff user ka naam type karo..." autocomplete="off">
+                    <div class="ac-dropdown" data-for="paid_to"></div>
+                    <span class="hint" data-hint="paid_to">Search karke select karo</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-label">Detail</div>
+                <div class="form-field">
+                    <textarea name="detail" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="preview-actions">
+                <button class="btn btn-confirm" data-action="save">✓ Save Transaction</button>
+                <button class="btn btn-cancel" data-action="cancel">✗ Cancel</button>
+            </div>
+        `;
+        messagesEl.appendChild(card);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        const customerInput = card.querySelector('input[name=customer]');
+        const customerDD = card.querySelector('.ac-dropdown[data-for=customer]');
+        const customerHint = card.querySelector('[data-hint=customer]');
+        const ledgerSelect = card.querySelector('select[name=ledger]');
+        const paidToInput = card.querySelector('input[name=paid_to]');
+        const paidToDD = card.querySelector('.ac-dropdown[data-for=paid_to]');
+        const paidToHint = card.querySelector('[data-hint=paid_to]');
+
+        let selectedCustomerId = null;
+        let selectedPaidToId = null;
+
+        attachAutocomplete(
+            customerInput,
+            customerDD,
+            async (q) => {
+                const data = await api('/chat/api/lookup/customers/?q=' + encodeURIComponent(q));
+                return data.results || [];
+            },
+            (c) => {
+                const phone = c.phone_no ? ' • ' + escapeHtml(c.phone_no) : '';
+                return escapeHtml(c.full_name) + '<span class="ac-sub">' + phone + '</span>';
+            },
+            async (c) => {
+                selectedCustomerId = c.id;
+                customerInput.value = c.full_name;
+                customerHint.textContent = '✓ Selected: ' + c.full_name;
+                customerHint.classList.remove('error');
+                await loadLedgersFor(c.id);
+            }
+        );
+
+        attachAutocomplete(
+            paidToInput,
+            paidToDD,
+            async (q) => {
+                const data = await api('/chat/api/lookup/users/?q=' + encodeURIComponent(q));
+                return data.results || [];
+            },
+            (u) => {
+                return escapeHtml(u.full_name) + '<span class="ac-sub"> • @' + escapeHtml(u.username) + '</span>';
+            },
+            (u) => {
+                selectedPaidToId = u.id;
+                paidToInput.value = u.full_name;
+                paidToHint.textContent = '✓ Selected: ' + u.full_name;
+                paidToHint.classList.remove('error');
+            }
+        );
+
+        // Reset selection if user edits the input after selecting
+        customerInput.addEventListener('input', () => {
+            if (selectedCustomerId !== null) {
+                selectedCustomerId = null;
+                ledgerSelect.innerHTML = '<option value="">Pehle customer select karo</option>';
+                ledgerSelect.disabled = true;
+                customerHint.textContent = 'Search karke select karo';
+            }
+        });
+        paidToInput.addEventListener('input', () => {
+            if (selectedPaidToId !== null) {
+                selectedPaidToId = null;
+                paidToHint.textContent = 'Search karke select karo';
+            }
+        });
+
+        async function loadLedgersFor(customerId) {
+            ledgerSelect.disabled = true;
+            ledgerSelect.innerHTML = '<option value="">Loading...</option>';
+            try {
+                const data = await api('/chat/api/lookup/customer-ledgers/?customer_id=' + customerId);
+                const ledgers = data.ledgers || [];
+                if (!ledgers.length) {
+                    ledgerSelect.innerHTML = '<option value="">Is customer ka koi ledger nahi hai</option>';
+                    return;
+                }
+                ledgerSelect.innerHTML = '<option value="">-- Select --</option>' +
+                    ledgers.map(l => {
+                        const txt = l.project + ' / ' + l.house +
+                            ' (Outstanding Rs. ' + l.outstanding_balance + ')';
+                        return '<option value="' + l.id + '">' + escapeHtml(txt) + '</option>';
+                    }).join('');
+                ledgerSelect.disabled = false;
+                if (ledgers.length === 1) {
+                    ledgerSelect.value = ledgers[0].id;
+                }
+            } catch (e) {
+                ledgerSelect.innerHTML = '<option value="">Error loading ledgers</option>';
+                console.error(e);
+            }
+        }
+
+        card.querySelector('[data-action=cancel]').onclick = () => card.remove();
+        card.querySelector('[data-action=save]').onclick = () => submitTxn(card, {
+            getCustomerId: () => selectedCustomerId,
+            getPaidToId: () => selectedPaidToId,
+        });
+    }
+
+    async function submitTxn(card, ctx) {
+        const ledgerId = card.querySelector('select[name=ledger]').value;
+        const amount = card.querySelector('input[name=amount]').value;
+        const paymentType = card.querySelector('select[name=payment_type]').value;
+        const paidOn = card.querySelector('input[name=paid_on]').value;
+        const detail = card.querySelector('textarea[name=detail]').value;
+
+        const errors = [];
+        if (!ctx.getCustomerId()) errors.push('Customer select karo');
+        if (!ledgerId) errors.push('Ledger (project/house) select karo');
+        if (!amount || parseFloat(amount) <= 0) errors.push('Valid amount daalo');
+        if (!paidOn) errors.push('Date daalo');
+        if (!ctx.getPaidToId()) errors.push('Paid To user select karo');
+        if (errors.length) {
+            alert(errors.join('\n'));
+            return;
+        }
+
+        const buttons = card.querySelectorAll('button');
+        buttons.forEach(b => b.disabled = true);
+
+        try {
+            const res = await api('/chat/api/quick/customer-txn/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    customer_ledger_id: parseInt(ledgerId, 10),
+                    amount: amount,
+                    payment_type: paymentType,
+                    paid_on: paidOn,
+                    paid_to_user_id: ctx.getPaidToId(),
+                    detail: detail || '',
+                }),
+            });
+            const result = document.createElement('div');
+            result.className = 'result-card';
+            result.textContent = '✓ ' + res.message;
+            card.replaceWith(result);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        } catch (e) {
+            alert('Save failed: ' + e.message);
+            buttons.forEach(b => b.disabled = false);
+        }
+    }
+
+    // Web Speech API setup
+    let SRClass = null;
+
+    function setupRecognition() {
+        SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SRClass) {
+            micBtn.disabled = true;
+            micBtn.title = 'Speech recognition not supported in this browser';
+        }
+    }
+
+    function startRecording() {
+        if (!SRClass) return;
+
+        // Fresh instance each time so finalTranscript resets and no stale state
+        recognition = new SRClass();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = langSelect.value;
+
+        let finalTranscript = '';
+
+        recognition.onresult = (event) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript + ' ';
+                } else {
+                    interim += transcript;
+                }
+            }
+            inputEl.value = (finalTranscript + interim).trim();
+        };
+
+        recognition.onerror = (e) => {
+            if (e.error === 'not-allowed') {
+                alert('Microphone access denied.\nBrowser settings mein microphone allow karo aur page reload karo.');
+            } else if (e.error === 'no-speech') {
+                // silence — ignore, auto-restart will handle it
+            } else {
+                console.error('Speech recognition error:', e.error);
+            }
+            stopRecording();
+        };
+
+        recognition.onend = () => {
+            if (isRecording) {
+                // auto-restart after silence (some browsers stop after a pause)
+                try { recognition.start(); } catch (_) {}
+            }
+        };
+
+        try {
+            recognition.start();
+            isRecording = true;
+            micBtn.classList.add('recording');
+            micBtn.textContent = '⏹';
+        } catch (e) {
+            console.error('Could not start speech recognition:', e);
+            recognition = null;
+        }
+    }
+
+    async function stopRecording() {
+        isRecording = false;
+        if (recognition) {
+            try { recognition.stop(); } catch (_) {}
+            recognition = null;
+        }
+        micBtn.classList.remove('recording');
+        micBtn.textContent = '🎤';
+
+        const text = inputEl.value.trim();
+        if (text && langSelect.value === 'hi-IN') {
+            inputEl.disabled = true;
+            micBtn.disabled = true;
+            const originalPlaceholder = inputEl.placeholder;
+            inputEl.placeholder = 'Translating to English...';
+            
+            try {
+                const res = await api('/chat/api/translate/', {
+                    method: 'POST',
+                    body: JSON.stringify({ text }),
+                });
+                if (res.translated_text) {
+                    inputEl.value = res.translated_text;
+                }
+            } catch (e) {
+                console.error('Translation failed:', e);
+            } finally {
+                inputEl.disabled = false;
+                micBtn.disabled = false;
+                inputEl.placeholder = originalPlaceholder;
+                inputEl.focus();
+            }
+        }
+    }
+
+    micBtn.addEventListener('click', () => {
+        if (isRecording) stopRecording();
+        else startRecording();
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    newChatBtn.addEventListener('click', newSession);
+
+    setupRecognition();
+    loadSessions();
+
+    // =================================================================
+    // PROJECT WORKERS CHATBOT FLOW
+    // =================================================================
+
+    const WAGES_TYPES = { 10: 'Per Day', 20: 'Per Hour', 30: 'Per SQ FT', 40: 'Lum Sum' };
+
+    function pwCard(html) {
+        const card = document.createElement('div');
+        card.className = 'pw-card';
+        card.innerHTML = html;
+        messagesEl.appendChild(card);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return card;
+    }
+
+    function renderProjectWorkersOptions() {
+        const card = pwCard(`
+            <h3>👷 Project Workers — Kya karna hai?</h3>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="create-worker">1: Create Global Worker</button>
+                <button class="pw-opt-btn secondary" data-action="show-projects">2: Show Project List</button>
+            </div>
+        `);
+        card.querySelector('[data-action=create-worker]').onclick = () => {
+            card.remove();
+            renderCreateWorkerForm();
+        };
+        card.querySelector('[data-action=show-projects]').onclick = () => {
+            card.remove();
+            renderProjectListUI();
+        };
+    }
+
+    // ── Create Global Worker ──────────────────────────────────────────
+    async function renderCreateWorkerForm() {
+        let types = [];
+        try {
+            const data = await api('/chat/api/worker-types/');
+            types = data.types || [];
+        } catch (e) {
+            pwCard(`<h3>⚠️ Error</h3><div class="pw-empty">${escapeHtml(e.message)}</div>`);
+            return;
+        }
+
+        const typeOptions = types.map(t =>
+            `<option value="${t.id}">${escapeHtml(t.name)} (Rs.${t.wages})</option>`
+        ).join('');
+
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>➕ Create Global Worker</h3>
+            <div class="pw-form-group"><label>Name *</label><input name="name" type="text" placeholder="Worker ka naam"></div>
+            <div class="pw-form-group"><label>Worker Type *</label>
+                <select name="worker_type_id"><option value="">-- Select --</option>${typeOptions}</select></div>
+            <div class="pw-form-group"><label>Wages (Rs.) *</label><input name="wages" type="number" min="0" placeholder="0"></div>
+            <div class="pw-form-group"><label>Wages Type *</label>
+                <select name="wages_type">
+                    <option value="10">Per Day</option>
+                    <option value="20">Per Hour</option>
+                    <option value="30">Per SQ FT</option>
+                    <option value="40">Lum Sum</option>
+                </select></div>
+            <div class="pw-form-group"><label>Mobile *</label><input name="mobile" type="text" placeholder="10-digit mobile number"></div>
+            <div class="pw-form-group"><label>Rating (1-5)</label><input name="ratting" type="number" min="1" max="5" placeholder="Optional"></div>
+            <div class="pw-form-group"><label>Status</label>
+                <select name="status">
+                    <option value="10">Active</option>
+                    <option value="20">Inactive</option>
+                </select></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Create Worker</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectWorkersOptions(); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderProjectWorkersOptions(); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            const payload = {
+                name: card.querySelector('[name=name]').value.trim(),
+                worker_type_id: card.querySelector('[name=worker_type_id]').value,
+                wages: card.querySelector('[name=wages]').value,
+                wages_type: card.querySelector('[name=wages_type]').value,
+                mobile: card.querySelector('[name=mobile]').value.trim(),
+                ratting: card.querySelector('[name=ratting]').value || null,
+                status: card.querySelector('[name=status]').value,
+            };
+            try {
+                const res = await api('/chat/api/create-worker/', { method: 'POST', body: JSON.stringify(payload) });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Worker Created</h3><div style="font-size:13px">"${escapeHtml(res.worker.name)}" worker ban gaya (ID: ${res.worker.id})</div>`);
+                setTimeout(() => { ok.remove(); renderProjectWorkersOptions(); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Project List ──────────────────────────────────────────────────
+    async function renderProjectListUI() {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📋 Project Select Karo</h3>
+            <input class="pw-search" placeholder="Project name search karo..." type="text">
+            <div class="pw-list" id="pwProjectList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectWorkersOptions(); };
+
+        const listEl = card.querySelector('#pwProjectList');
+        const searchEl = card.querySelector('.pw-search');
+
+        async function loadProjects(q) {
+            listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Loading...</div>';
+            try {
+                const data = await api('/chat/api/project-search/?q=' + encodeURIComponent(q));
+                const projects = data.projects || [];
+                if (!projects.length) {
+                    listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi project nahi mila</div>';
+                    return;
+                }
+                listEl.innerHTML = '';
+                projects.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'pw-list-item';
+                    item.textContent = p.name;
+                    item.onclick = () => { card.remove(); renderProjectSubOptions(p); };
+                    listEl.appendChild(item);
+                });
+            } catch (e) {
+                listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        let searchTimer = null;
+        searchEl.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => loadProjects(searchEl.value.trim()), 250);
+        });
+        loadProjects('');
+    }
+
+    // ── Project Sub-Options ───────────────────────────────────────────
+    function renderProjectSubOptions(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back to Projects</button>
+            <h3>📁 ${escapeHtml(project.name)}</h3>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="1">1: Assign New Worker</button>
+                <button class="pw-opt-btn" data-action="2">2: Per Day Attendance</button>
+                <button class="pw-opt-btn" data-action="3">3: Pay Per Day Worker</button>
+                <button class="pw-opt-btn secondary" data-action="4">4: Lum Sum Workers</button>
+                <button class="pw-opt-btn secondary" data-action="5">5: Per Hour Workers</button>
+                <button class="pw-opt-btn secondary" data-action="6">6: Per SQ FT Workers</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectListUI(); };
+        card.querySelector('[data-action="1"]').onclick = () => { card.remove(); renderAssignWorkerUI(project); };
+        card.querySelector('[data-action="2"]').onclick = () => { card.remove(); renderPerDayAttendanceUI(project); };
+        card.querySelector('[data-action="3"]').onclick = () => { card.remove(); renderPayPerDayUI(project); };
+        card.querySelector('[data-action="4"]').onclick = () => { card.remove(); renderLumSumUI(project); };
+        card.querySelector('[data-action="5"]').onclick = () => { card.remove(); renderPerHourUI(project); };
+        card.querySelector('[data-action="6"]').onclick = () => { card.remove(); renderPerSqFtUI(project); };
+    }
+
+    // ── Option 1: Assign New Worker ───────────────────────────────────
+    async function renderAssignWorkerUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>➕ Assign Workers — ${escapeHtml(project.name)}</h3>
+            <div class="pw-list" id="pwUnassignedList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="assign">✓ Assign Selected</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+
+        const listEl = card.querySelector('#pwUnassignedList');
+        let workers = [];
+        try {
+            const data = await api(`/chat/api/projects/${project.id}/unassigned-workers/`);
+            workers = data.workers || [];
+        } catch (e) {
+            listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+            return;
+        }
+
+        if (!workers.length) {
+            listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Sabhi workers already assign hain ya koi worker nahi hai</div>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        workers.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'pw-list-item';
+            item.dataset.workerId = w.id;
+            item.dataset.wages = w.wages;
+            item.dataset.wagesType = w.wages_type;
+            item.innerHTML = `
+                <input type="checkbox" value="${w.id}">
+                <span>${escapeHtml(w.name)}</span>
+                <span class="pw-sub">${escapeHtml(w.wages_type_display)}</span>
+                <input class="pw-wages-input" type="number" value="${w.wages}" title="Wages">
+                <select class="pw-wages-input" style="width:90px">
+                    <option value="10" ${w.wages_type==10?'selected':''}>Per Day</option>
+                    <option value="20" ${w.wages_type==20?'selected':''}>Per Hour</option>
+                    <option value="30" ${w.wages_type==30?'selected':''}>Per SQ FT</option>
+                    <option value="40" ${w.wages_type==40?'selected':''}>Lum Sum</option>
+                </select>
+            `;
+            listEl.appendChild(item);
+        });
+
+        card.querySelector('[data-action=assign]').onclick = async () => {
+            const btn = card.querySelector('[data-action=assign]');
+            btn.disabled = true;
+            const selected = [];
+            listEl.querySelectorAll('.pw-list-item').forEach(item => {
+                const cb = item.querySelector('input[type=checkbox]');
+                if (cb && cb.checked) {
+                    const inputs = item.querySelectorAll('input[type=number], select');
+                    selected.push({
+                        worker_id: parseInt(item.dataset.workerId),
+                        wages: inputs[0] ? parseInt(inputs[0].value) : parseInt(item.dataset.wages),
+                        wages_type: inputs[1] ? parseInt(inputs[1].value) : parseInt(item.dataset.wagesType),
+                    });
+                }
+            });
+            if (!selected.length) { alert('Koi worker select nahi kiya'); btn.disabled = false; return; }
+            try {
+                const res = await api(`/chat/api/projects/${project.id}/assign-workers/`, {
+                    method: 'POST', body: JSON.stringify({ workers: selected }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Done</h3><div style="font-size:13px">${res.assigned} worker(s) assign hue, ${res.skipped} skip hue</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Option 2: Per Day Attendance ──────────────────────────────────
+    async function renderPerDayAttendanceUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📅 Per Day Attendance — ${escapeHtml(project.name)}</h3>
+            <div class="pw-list" id="pwPerDayList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="done">✓ Mark Attendance</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+
+        const listEl = card.querySelector('#pwPerDayList');
+        let workers = [];
+        try {
+            const data = await api(`/chat/api/projects/${project.id}/workers/10/`);
+            workers = data.workers || [];
+        } catch (e) {
+            listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`; return;
+        }
+
+        if (!workers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi per day worker nahi hai</div>'; return; }
+
+        listEl.innerHTML = '';
+        workers.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'pw-list-item';
+            item.dataset.pwId = w.pw_id;
+            item.innerHTML = `<input type="checkbox" value="${w.pw_id}"><span>${escapeHtml(w.worker_name)}</span><span class="pw-sub">Rs.${w.wages}/day</span>`;
+            listEl.appendChild(item);
+        });
+
+        card.querySelector('[data-action=done]').onclick = async () => {
+            const btn = card.querySelector('[data-action=done]');
+            btn.disabled = true;
+            const ids = [];
+            listEl.querySelectorAll('input[type=checkbox]:checked').forEach(cb => ids.push(parseInt(cb.value)));
+            if (!ids.length) { alert('Koi worker select nahi kiya'); btn.disabled = false; return; }
+            try {
+                const res = await api(`/chat/api/projects/${project.id}/mark-attendance/`, {
+                    method: 'POST', body: JSON.stringify({ project_worker_ids: ids }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Done</h3><div style="font-size:13px">${res.marked} attendance mark hui, ${res.skipped} skip hue (already marked ya not found)</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Option 3: Pay Per Day Workers ─────────────────────────────────
+    async function renderPayPerDayUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>💰 Pay Per Day Workers — ${escapeHtml(project.name)}</h3>
+            <div class="pw-list" id="pwPayPerDayList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save Payments</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+
+        const listEl = card.querySelector('#pwPayPerDayList');
+        let workers = [];
+        try {
+            const data = await api(`/chat/api/projects/${project.id}/workers/10/`);
+            workers = data.workers || [];
+        } catch (e) {
+            listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`; return;
+        }
+
+        if (!workers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi per day worker nahi hai</div>'; return; }
+
+        listEl.innerHTML = '';
+        workers.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'pw-list-item';
+            item.dataset.pwId = w.pw_id;
+            item.innerHTML = `
+                <input type="checkbox" value="${w.pw_id}">
+                <span>${escapeHtml(w.worker_name)}</span>
+                <span class="pw-sub">Total paid: Rs.${w.total_paid}</span>
+                <input class="pw-wages-input" type="number" min="0" placeholder="Amount" title="Amount to pay">
+            `;
+            listEl.appendChild(item);
+        });
+
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            const payments = [];
+            listEl.querySelectorAll('.pw-list-item').forEach(item => {
+                const cb = item.querySelector('input[type=checkbox]');
+                const amtEl = item.querySelector('input[type=number]');
+                if (cb && cb.checked && amtEl && parseFloat(amtEl.value) > 0) {
+                    payments.push({ project_worker_id: parseInt(item.dataset.pwId), amount: amtEl.value });
+                }
+            });
+            if (!payments.length) { alert('Koi worker select karo aur amount bhi daalo'); btn.disabled = false; return; }
+            try {
+                const res = await api('/chat/api/pay-per-day/', {
+                    method: 'POST', body: JSON.stringify({ payments }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Done</h3><div style="font-size:13px">${res.updated} worker(s) ka payment update hua</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Option 4: Lum Sum Workers ─────────────────────────────────────
+    async function renderLumSumUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📦 Lum Sum Workers — ${escapeHtml(project.name)}</h3>
+            <div class="pw-list" id="pwLumSumList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+
+        const listEl = card.querySelector('#pwLumSumList');
+        let workers = [];
+        try {
+            const data = await api(`/chat/api/projects/${project.id}/workers/40/`);
+            workers = data.workers || [];
+        } catch (e) {
+            listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`; return;
+        }
+
+        if (!workers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi lum sum worker nahi hai</div>'; return; }
+
+        listEl.innerHTML = '';
+        workers.forEach(w => {
+            const balance = w.wages - w.total_paid;
+            const item = document.createElement('div');
+            item.className = 'pw-list-item';
+            item.innerHTML = `<span>${escapeHtml(w.worker_name)}</span><span class="pw-sub">Balance: Rs.${balance.toFixed(2)}</span>`;
+            item.onclick = () => renderLumSumPayForm(project, w, card);
+            listEl.appendChild(item);
+        });
+    }
+
+    function renderLumSumPayForm(project, w, parentCard) {
+        parentCard.remove();
+        const balance = (w.wages - w.total_paid).toFixed(2);
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>💳 ${escapeHtml(w.worker_name)} — Lum Sum Payment</h3>
+            <div class="pw-detail-box">
+                <div class="pw-detail-row"><span>Total Contract</span><span>Rs. ${w.wages}</span></div>
+                <div class="pw-detail-row"><span>Paid So Far</span><span>Rs. ${w.total_paid}</span></div>
+                <div class="pw-detail-row"><span>Balance</span><span>Rs. ${balance}</span></div>
+            </div>
+            <div class="pw-amount-row">
+                <label>Amount (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="amount" placeholder="0">
+            </div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save Payment</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderLumSumUI(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderLumSumUI(project); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            const amount = card.querySelector('[name=amount]').value;
+            if (!amount || parseFloat(amount) <= 0) { alert('Amount daalo'); return; }
+            btn.disabled = true;
+            try {
+                await api(`/chat/api/project-workers/${w.pw_id}/lum-sum-pay/`, {
+                    method: 'POST', body: JSON.stringify({ amount }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Done</h3><div style="font-size:13px">Rs.${amount} payment save ho gaya</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Option 5: Per Hour Workers ────────────────────────────────────
+    async function renderPerHourUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>⏱ Per Hour Workers — ${escapeHtml(project.name)}</h3>
+            <div class="pw-list" id="pwPerHourList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+
+        const listEl = card.querySelector('#pwPerHourList');
+        let workers = [];
+        try {
+            const data = await api(`/chat/api/projects/${project.id}/workers/20/`);
+            workers = data.workers || [];
+        } catch (e) {
+            listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`; return;
+        }
+
+        if (!workers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi per hour worker nahi hai</div>'; return; }
+
+        listEl.innerHTML = '';
+        workers.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'pw-list-item';
+            item.innerHTML = `<span>${escapeHtml(w.worker_name)}</span><span class="pw-sub">Rs.${w.wages}/hr | Total paid: Rs.${w.total_paid}</span>`;
+            item.onclick = () => renderPerHourPayForm(project, w, card);
+            listEl.appendChild(item);
+        });
+    }
+
+    function renderPerHourPayForm(project, w, parentCard) {
+        parentCard.remove();
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>⏱ ${escapeHtml(w.worker_name)} — Per Hour Payment</h3>
+            <div class="pw-detail-box">
+                <div class="pw-detail-row"><span>Wage Rate</span><span>Rs. ${w.wages}/hour</span></div>
+                <div class="pw-detail-row"><span>Total Paid So Far</span><span>Rs. ${w.total_paid}</span></div>
+            </div>
+            <div class="pw-amount-row">
+                <label>Hours Worked *</label>
+                <input type="number" min="0" step="0.5" name="hours" placeholder="0">
+                <span class="pw-total-hint" id="pwHoursTotal"></span>
+            </div>
+            <div class="pw-amount-row">
+                <label>Amount Paid (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="amount" placeholder="0">
+            </div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        const hoursInput = card.querySelector('[name=hours]');
+        const totalHint = card.querySelector('#pwHoursTotal');
+        hoursInput.addEventListener('input', () => {
+            const h = parseFloat(hoursInput.value) || 0;
+            totalHint.textContent = h > 0 ? `= Rs. ${(h * w.wages).toFixed(2)}` : '';
+        });
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderPerHourUI(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderPerHourUI(project); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            const hours = card.querySelector('[name=hours]').value;
+            const amount = card.querySelector('[name=amount]').value || '0';
+            if (!hours || parseFloat(hours) <= 0) { alert('Hours required'); return; }
+            btn.disabled = true;
+            try {
+                await api(`/chat/api/project-workers/${w.pw_id}/per-hour-pay/`, {
+                    method: 'POST', body: JSON.stringify({ hours, amount }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Done</h3><div style="font-size:13px">${hours} hours, Rs.${amount} save ho gaya</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Option 6: Per SQ FT Workers ───────────────────────────────────
+    async function renderPerSqFtUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📐 Per SQ FT Workers — ${escapeHtml(project.name)}</h3>
+            <div class="pw-list" id="pwSqFtList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSubOptions(project); };
+
+        const listEl = card.querySelector('#pwSqFtList');
+        let workers = [];
+        try {
+            const data = await api(`/chat/api/projects/${project.id}/workers/30/`);
+            workers = data.workers || [];
+        } catch (e) {
+            listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`; return;
+        }
+
+        if (!workers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi per sq ft worker nahi hai</div>'; return; }
+
+        listEl.innerHTML = '';
+        workers.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'pw-list-item';
+            item.innerHTML = `<span>${escapeHtml(w.worker_name)}</span><span class="pw-sub">Rs.${w.wages}/sqft | Paid: Rs.${w.total_paid}</span>`;
+            item.onclick = () => renderPerSqFtPayForm(project, w, card);
+            listEl.appendChild(item);
+        });
+    }
+
+    function renderPerSqFtPayForm(project, w, parentCard) {
+        parentCard.remove();
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📐 ${escapeHtml(w.worker_name)} — Per SQ FT Payment</h3>
+            <div class="pw-detail-box">
+                <div class="pw-detail-row"><span>Rate</span><span>Rs. ${w.wages}/sq ft</span></div>
+                <div class="pw-detail-row"><span>Total Paid So Far</span><span>Rs. ${w.total_paid}</span></div>
+            </div>
+            <div class="pw-amount-row">
+                <label>Amount (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="amount" placeholder="0">
+            </div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderPerSqFtUI(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderPerSqFtUI(project); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            const amount = card.querySelector('[name=amount]').value;
+            if (!amount || parseFloat(amount) <= 0) { alert('Amount daalo'); return; }
+            btn.disabled = true;
+            try {
+                await api(`/chat/api/project-workers/${w.pw_id}/per-sqft-pay/`, {
+                    method: 'POST', body: JSON.stringify({ amount }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Done</h3><div style="font-size:13px">Rs.${amount} payment save ho gaya</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // =================================================================
+    // PROJECT SUPPLIERS CHATBOT FLOW
+    // =================================================================
+
+    function renderProjectSuppliersOptions() {
+        const card = pwCard(`
+            <h3>🚚 Project Suppliers — Kya karna hai?</h3>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="create-supplier">1: Create Global Supplier</button>
+                <button class="pw-opt-btn secondary" data-action="show-projects">2: Show Project List</button>
+            </div>
+        `);
+        card.querySelector('[data-action=create-supplier]').onclick = () => { card.remove(); renderCreateSupplierForm(); };
+        card.querySelector('[data-action=show-projects]').onclick = () => { card.remove(); renderSupplierProjectListUI(); };
+    }
+
+    // ── Create Global Supplier ────────────────────────────────────────
+    async function renderCreateSupplierForm() {
+        let brands = [];
+        try {
+            const data = await api('/chat/api/brands/');
+            brands = data.brands || [];
+        } catch (_) {}
+
+        const brandOptions = `<option value="">-- None --</option>` +
+            brands.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>➕ Create Global Supplier</h3>
+            <div class="pw-form-group"><label>Shop Name *</label><input name="shop_name" type="text" placeholder="Dukaan ka naam"></div>
+            <div class="pw-form-group"><label>Mobile *</label><input name="mobile" type="text" placeholder="10-digit mobile number"></div>
+            <div class="pw-form-group"><label>First Name</label><input name="first_name" type="text" placeholder="Optional"></div>
+            <div class="pw-form-group"><label>Last Name</label><input name="last_name" type="text" placeholder="Optional"></div>
+            <div class="pw-form-group"><label>Address</label><input name="address" type="text" placeholder="Optional"></div>
+            <div class="pw-form-group"><label>Brand</label><select name="brand_id">${brandOptions}</select></div>
+            <div class="pw-form-group"><label>Status</label>
+                <select name="status"><option value="10">Active</option><option value="20">Inactive</option></select></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Create Supplier</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSuppliersOptions(); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderProjectSuppliersOptions(); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            const payload = {
+                shop_name: card.querySelector('[name=shop_name]').value.trim(),
+                mobile: card.querySelector('[name=mobile]').value.trim(),
+                first_name: card.querySelector('[name=first_name]').value.trim(),
+                last_name: card.querySelector('[name=last_name]').value.trim(),
+                address: card.querySelector('[name=address]').value.trim(),
+                brand_id: card.querySelector('[name=brand_id]').value || null,
+                status: card.querySelector('[name=status]').value,
+            };
+            try {
+                const res = await api('/chat/api/create-supplier/', { method: 'POST', body: JSON.stringify(payload) });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Supplier Created</h3><div style="font-size:13px">"${escapeHtml(res.supplier.name)}" supplier ban gaya (ID: ${res.supplier.id})</div>`);
+                setTimeout(() => { ok.remove(); renderProjectSuppliersOptions(); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Project List (Suppliers) ──────────────────────────────────────
+    async function renderSupplierProjectListUI() {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📋 Project Select Karo</h3>
+            <input class="pw-search" placeholder="Project name search karo..." type="text">
+            <div class="pw-list" id="pwSupplierProjectList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderProjectSuppliersOptions(); };
+        const listEl = card.querySelector('#pwSupplierProjectList');
+        const searchEl = card.querySelector('.pw-search');
+
+        async function loadProjects(q) {
+            listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Loading...</div>';
+            try {
+                const data = await api('/chat/api/project-search/?q=' + encodeURIComponent(q));
+                const projects = data.projects || [];
+                if (!projects.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi project nahi mila</div>'; return; }
+                listEl.innerHTML = '';
+                projects.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'pw-list-item';
+                    item.textContent = p.name;
+                    item.onclick = () => { card.remove(); renderSupplierProjectSubOptions(p); };
+                    listEl.appendChild(item);
+                });
+            } catch (e) {
+                listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+        let t = null;
+        searchEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => loadProjects(searchEl.value.trim()), 250); });
+        loadProjects('');
+    }
+
+    // ── Supplier Project Sub-Options ──────────────────────────────────
+    function renderSupplierProjectSubOptions(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back to Projects</button>
+            <h3>📁 ${escapeHtml(project.name)}</h3>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="create-ledger">1: Create Project Supplier Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="show-ledgers">2: Show Project Supplier Ledger</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderSupplierProjectListUI(); };
+        card.querySelector('[data-action=create-ledger]').onclick = () => { card.remove(); renderCreateSupplierLedgerForm(project); };
+        card.querySelector('[data-action=show-ledgers]').onclick = () => { card.remove(); renderSupplierLedgerListUI(project); };
+    }
+
+    // ── Create Project Supplier Ledger ────────────────────────────────
+    async function renderCreateSupplierLedgerForm(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>➕ Create Supplier Ledger — ${escapeHtml(project.name)}</h3>
+            <div class="pw-form-group">
+                <label>Supplier *</label>
+                <div class="pw-ac-wrap">
+                    <input name="supplier_search" type="text" placeholder="Supplier name type karo..." autocomplete="off"
+                        style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit">
+                    <div class="pw-ac-drop" id="supplierDrop"></div>
+                </div>
+                <span style="font-size:11px;color:#7f8c8d" id="supplierHint">Search karke select karo</span>
+            </div>
+            <div class="pw-form-group"><label>Item Description *</label>
+                <textarea name="item_description" rows="2"
+                    style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"
+                    placeholder="Kya item liya"></textarea></div>
+            <div class="pw-form-group"><label>Item Date *</label><input name="item_date" type="date" value="${todayIso()}"></div>
+            <div class="pw-form-group"><label>Total Amount (Rs.) *</label><input name="total_amount" type="number" min="0" step="0.01" placeholder="0"></div>
+            <div class="pw-form-group"><label>Paid Amount (Rs.)</label><input name="paid_amount" type="number" min="0" step="0.01" placeholder="0" value="0"></div>
+            <div class="pw-form-group"><label>Notes</label>
+                <textarea name="notes" rows="2"
+                    style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"
+                    placeholder="Optional"></textarea></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Create Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        let selectedSupplierId = null;
+        const suppInput = card.querySelector('[name=supplier_search]');
+        const suppDrop = card.querySelector('#supplierDrop');
+        const suppHint = card.querySelector('#supplierHint');
+
+        let searchT = null;
+        suppInput.addEventListener('input', () => {
+            selectedSupplierId = null;
+            suppHint.textContent = 'Search karke select karo';
+            clearTimeout(searchT);
+            searchT = setTimeout(async () => {
+                const q = suppInput.value.trim();
+                if (!q) { suppDrop.style.display = 'none'; return; }
+                try {
+                    const data = await api('/chat/api/suppliers/?q=' + encodeURIComponent(q));
+                    suppDrop.innerHTML = '';
+                    if (!data.suppliers.length) {
+                        suppDrop.innerHTML = '<div class="pw-ac-item" style="color:#999">Koi supplier nahi mila</div>';
+                    } else {
+                        data.suppliers.forEach(s => {
+                            const item = document.createElement('div');
+                            item.className = 'pw-ac-item';
+                            item.textContent = s.name + ' (' + s.mobile + ')';
+                            item.onmousedown = (e) => {
+                                e.preventDefault();
+                                selectedSupplierId = s.id;
+                                suppInput.value = s.name;
+                                suppHint.textContent = '✓ Selected: ' + s.name;
+                                suppDrop.style.display = 'none';
+                            };
+                            suppDrop.appendChild(item);
+                        });
+                    }
+                    suppDrop.style.display = 'block';
+                } catch (_) {}
+            }, 250);
+        });
+        suppInput.addEventListener('blur', () => setTimeout(() => { suppDrop.style.display = 'none'; }, 150));
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderSupplierProjectSubOptions(project); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderSupplierProjectSubOptions(project); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            if (!selectedSupplierId) { alert('Supplier select karo'); return; }
+            btn.disabled = true;
+            const payload = {
+                supplier_id: selectedSupplierId,
+                item_description: card.querySelector('[name=item_description]').value.trim(),
+                item_date: card.querySelector('[name=item_date]').value,
+                total_amount: card.querySelector('[name=total_amount]').value,
+                paid_amount: card.querySelector('[name=paid_amount]').value || '0',
+                notes: card.querySelector('[name=notes]').value.trim(),
+            };
+            try {
+                await api(`/chat/api/projects/${project.id}/create-supplier-ledger/`, {
+                    method: 'POST', body: JSON.stringify(payload),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Ledger Created</h3><div style="font-size:13px">Supplier ledger ban gaya</div>`);
+                setTimeout(() => { ok.remove(); renderSupplierProjectSubOptions(project); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Show Supplier Ledger List ─────────────────────────────────────
+    async function renderSupplierLedgerListUI(project) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📄 Supplier Ledgers — ${escapeHtml(project.name)}</h3>
+            <input class="pw-search" placeholder="Supplier name se search karo..." type="text">
+            <div class="pw-list" id="pwLedgerList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderSupplierProjectSubOptions(project); };
+        const listEl = card.querySelector('#pwLedgerList');
+        const searchEl = card.querySelector('.pw-search');
+
+        async function loadLedgers(q) {
+            listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Loading...</div>';
+            try {
+                const data = await api(`/chat/api/projects/${project.id}/supplier-ledgers/?q=` + encodeURIComponent(q));
+                const ledgers = data.ledgers || [];
+                if (!ledgers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi ledger nahi mila</div>'; return; }
+                listEl.innerHTML = '';
+                ledgers.forEach(l => {
+                    const item = document.createElement('div');
+                    item.className = 'pw-list-item';
+                    item.style.flexDirection = 'column';
+                    item.style.alignItems = 'flex-start';
+                    item.style.gap = '2px';
+                    item.innerHTML = `
+                        <span style="font-weight:600">${escapeHtml(l.supplier_name)}</span>
+                        <span style="font-size:11px;color:#555">${escapeHtml(l.item_description.substring(0,60))}${l.item_description.length>60?'...':''}</span>
+                        <span style="font-size:11px;color:#7f8c8d">Total: Rs.${l.total_amount} | Paid: Rs.${l.paid_amount} | Balance: Rs.${l.balance} | ${l.item_date}</span>
+                    `;
+                    item.onclick = () => { card.remove(); renderSupplierLedgerDetail(project, l.id); };
+                    listEl.appendChild(item);
+                });
+            } catch (e) {
+                listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+        let t = null;
+        searchEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => loadLedgers(searchEl.value.trim()), 250); });
+        loadLedgers('');
+    }
+
+    // ── Supplier Ledger Detail ────────────────────────────────────────
+    async function renderSupplierLedgerDetail(project, ledgerId) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3 id="slDetailTitle">Loading...</h3>
+            <div class="pw-tabs">
+                <button class="pw-tab active" data-tab="details">Details</button>
+                <button class="pw-tab" data-tab="payments">Payments</button>
+            </div>
+            <div class="pw-tab-panel active" id="slDetailsPanel">Loading...</div>
+            <div class="pw-tab-panel" id="slPaymentsPanel">Loading...</div>
+            <div class="pw-options" style="margin-top:10px">
+                <button class="pw-opt-btn" data-action="add-payment">+ Add Payment</button>
+                <button class="pw-opt-btn secondary" data-action="create-ledger">+ Create New Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="show-ledgers">← Show All Ledgers</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderSupplierProjectSubOptions(project); };
+        card.querySelector('[data-action=create-ledger]').onclick = () => { card.remove(); renderCreateSupplierLedgerForm(project); };
+        card.querySelector('[data-action=show-ledgers]').onclick = () => { card.remove(); renderSupplierLedgerListUI(project); };
+        card.querySelector('[data-action=add-payment]').onclick = () => { card.remove(); renderAddPaymentForm(project, ledgerId); };
+
+        // Tab switching
+        card.querySelectorAll('.pw-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                card.querySelectorAll('.pw-tab').forEach(t => t.classList.remove('active'));
+                card.querySelectorAll('.pw-tab-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                card.querySelector('#sl' + tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1) + 'Panel').classList.add('active');
+            });
+        });
+
+        await refreshLedgerDetail(card, ledgerId);
+    }
+
+    async function refreshLedgerDetail(card, ledgerId) {
+        try {
+            const sl = await api(`/chat/api/supplier-ledgers/${ledgerId}/`);
+            card.querySelector('#slDetailTitle').textContent = `📄 ${sl.supplier_name} — ${sl.project_name}`;
+
+            card.querySelector('#slDetailsPanel').innerHTML = `
+                <div class="pw-detail-box" style="margin-top:8px">
+                    <div class="pw-detail-row"><span>Supplier</span><span>${escapeHtml(sl.supplier_name)}</span></div>
+                    <div class="pw-detail-row"><span>Item</span><span>${escapeHtml(sl.item_description)}</span></div>
+                    <div class="pw-detail-row"><span>Item Date</span><span>${sl.item_date}</span></div>
+                    <div class="pw-detail-row"><span>Total Amount</span><span>Rs. ${sl.total_amount}</span></div>
+                    <div class="pw-detail-row"><span>Paid Amount</span><span>Rs. ${sl.paid_amount}</span></div>
+                    <div class="pw-detail-row"><span>Balance</span><span style="color:${sl.balance>0?'#c0392b':'#27ae60'}">Rs. ${sl.balance}</span></div>
+                    ${sl.notes ? `<div class="pw-detail-row"><span>Notes</span><span>${escapeHtml(sl.notes)}</span></div>` : ''}
+                </div>
+            `;
+
+            const paymentsPanel = card.querySelector('#slPaymentsPanel');
+            if (!sl.payments.length) {
+                paymentsPanel.innerHTML = '<div class="pw-empty" style="padding:10px">Koi payment nahi hai</div>';
+            } else {
+                paymentsPanel.innerHTML = sl.payments.map(p => `
+                    <div class="pw-payment-item">
+                        <div class="pw-pay-row"><span><strong>Rs. ${p.payment_amount}</strong></span><span>${p.payment_date}</span></div>
+                        <div class="pw-pay-sub">${escapeHtml(p.payment_mode)}${p.reference_number ? ' | Ref: ' + escapeHtml(p.reference_number) : ''}${p.notes ? ' | ' + escapeHtml(p.notes) : ''}</div>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            card.querySelector('#slDetailsPanel').innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    // ── Add Payment Form ──────────────────────────────────────────────
+    async function renderAddPaymentForm(project, ledgerId) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>💳 Add Supplier Payment</h3>
+            <div class="pw-form-group"><label>Payment Amount (Rs.) *</label><input name="payment_amount" type="number" min="0" step="0.01" placeholder="0"></div>
+            <div class="pw-form-group"><label>Payment Date *</label><input name="payment_date" type="date" value="${todayIso()}"></div>
+            <div class="pw-form-group"><label>Payment Mode *</label>
+                <select name="payment_mode">
+                    <option value="cash">Cash</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="online">Online</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                </select></div>
+            <div class="pw-form-group"><label>Reference Number</label><input name="reference_number" type="text" placeholder="Optional"></div>
+            <div class="pw-form-group"><label>Notes</label>
+                <textarea name="notes" rows="2"
+                    style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"
+                    placeholder="Optional"></textarea></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save Payment</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderSupplierLedgerDetail(project, ledgerId); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderSupplierLedgerDetail(project, ledgerId); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            const payload = {
+                payment_amount: card.querySelector('[name=payment_amount]').value,
+                payment_date: card.querySelector('[name=payment_date]').value,
+                payment_mode: card.querySelector('[name=payment_mode]').value,
+                reference_number: card.querySelector('[name=reference_number]').value.trim(),
+                notes: card.querySelector('[name=notes]').value.trim(),
+            };
+            try {
+                await api(`/chat/api/supplier-ledgers/${ledgerId}/add-payment/`, {
+                    method: 'POST', body: JSON.stringify(payload),
+                });
+                card.remove();
+                renderSupplierLedgerDetail(project, ledgerId);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // =================================================================
+    // USER LEDGER CHATBOT FLOW
+    // =================================================================
+
+    function renderUserLedgerOptions() {
+        const card = pwCard(`
+            <h3>💳 User Ledger — Kya karna hai?</h3>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="create">1: Create User Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="show">2: Show User Ledgers</button>
+            </div>
+        `);
+        card.querySelector('[data-action=create]').onclick = () => { card.remove(); renderCreateUserLedgerForm(); };
+        card.querySelector('[data-action=show]').onclick = () => { card.remove(); renderUserLedgerListUI(); };
+    }
+
+    // ── Shared: User autocomplete helper ─────────────────────────────
+    function attachUserAC(card, inputName, dropId, hintId, onSelect) {
+        const input = card.querySelector(`[name=${inputName}]`);
+        const drop = card.querySelector(`#${dropId}`);
+        const hint = card.querySelector(`#${hintId}`);
+        let t = null;
+        input.addEventListener('input', () => {
+            onSelect(null);
+            hint.textContent = 'Search karke select karo';
+            clearTimeout(t);
+            t = setTimeout(async () => {
+                const q = input.value.trim();
+                if (!q) { drop.style.display = 'none'; return; }
+                try {
+                    const data = await api('/chat/api/lookup/users/?q=' + encodeURIComponent(q));
+                    drop.innerHTML = '';
+                    const results = data.results || [];
+                    if (!results.length) {
+                        drop.innerHTML = '<div class="pw-ac-item" style="color:#999">Koi user nahi mila</div>';
+                    } else {
+                        results.forEach(u => {
+                            const item = document.createElement('div');
+                            item.className = 'pw-ac-item';
+                            item.textContent = u.full_name + ' (@' + u.username + ')';
+                            item.onmousedown = (e) => {
+                                e.preventDefault();
+                                input.value = u.full_name;
+                                hint.textContent = '✓ Selected: ' + u.full_name;
+                                drop.style.display = 'none';
+                                onSelect(u.id);
+                            };
+                            drop.appendChild(item);
+                        });
+                    }
+                    drop.style.display = 'block';
+                } catch (_) {}
+            }, 250);
+        });
+        input.addEventListener('blur', () => setTimeout(() => { drop.style.display = 'none'; }, 150));
+    }
+
+    // ── Create User Ledger ────────────────────────────────────────────
+    async function renderCreateUserLedgerForm() {
+        // Load projects for dropdown
+        let projects = [];
+        try {
+            const d = await api('/chat/api/project-search/?q=');
+            projects = d.projects || [];
+        } catch (_) {}
+        const projOptions = `<option value="">-- Select Project --</option>` +
+            projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>➕ Create User Ledger</h3>
+            <div class="pw-form-group">
+                <label>Creditor (Paisa dene wala) *</label>
+                <div class="pw-ac-wrap">
+                    <input name="creditor_search" type="text" placeholder="Creditor name type karo..."
+                        autocomplete="off" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit">
+                    <div class="pw-ac-drop" id="creditorDrop"></div>
+                </div>
+                <span style="font-size:11px;color:#7f8c8d" id="creditorHint">Search karke select karo</span>
+            </div>
+            <div class="pw-form-group">
+                <label>Debtor (Paisa lene wala) *</label>
+                <div class="pw-ac-wrap">
+                    <input name="debtor_search" type="text" placeholder="Debtor name type karo..."
+                        autocomplete="off" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit">
+                    <div class="pw-ac-drop" id="debtorDrop"></div>
+                </div>
+                <span style="font-size:11px;color:#7f8c8d" id="debtorHint">Search karke select karo</span>
+            </div>
+            <div class="pw-form-group"><label>Project *</label><select name="project_id">${projOptions}</select></div>
+            <div class="pw-form-group"><label>Amount (Rs.) *</label><input name="amount" type="number" min="0.01" step="0.01" placeholder="0"></div>
+            <div class="pw-form-group"><label>Balance (Rs.) *</label><input name="balance" type="number" min="0" step="0.01" placeholder="Default = Amount"></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Create Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        let selectedCreditorId = null;
+        let selectedDebtorId = null;
+
+        attachUserAC(card, 'creditor_search', 'creditorDrop', 'creditorHint', (id) => { selectedCreditorId = id; });
+        attachUserAC(card, 'debtor_search', 'debtorDrop', 'debtorHint', (id) => { selectedDebtorId = id; });
+
+        // Auto-fill balance when amount changes
+        const amountInput = card.querySelector('[name=amount]');
+        const balanceInput = card.querySelector('[name=balance]');
+        amountInput.addEventListener('input', () => {
+            if (!balanceInput.value || balanceInput.value === amountInput._lastAmt) {
+                balanceInput.value = amountInput.value;
+            }
+            amountInput._lastAmt = amountInput.value;
+        });
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderUserLedgerOptions(); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderUserLedgerOptions(); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            if (!selectedCreditorId) { alert('Creditor select karo'); return; }
+            if (!selectedDebtorId) { alert('Debtor select karo'); return; }
+            btn.disabled = true;
+            const amount = card.querySelector('[name=amount]').value;
+            const payload = {
+                creditor_id: selectedCreditorId,
+                debtor_id: selectedDebtorId,
+                project_id: card.querySelector('[name=project_id]').value,
+                amount: amount,
+                balance: card.querySelector('[name=balance]').value || amount,
+            };
+            try {
+                const res = await api('/chat/api/create-user-ledger/', { method: 'POST', body: JSON.stringify(payload) });
+                card.remove();
+                const ok = pwCard(`<h3>✅ User Ledger Created</h3><div style="font-size:13px">Ledger #${res.ledger_id} ban gaya</div>`);
+                setTimeout(() => { ok.remove(); renderUserLedgerOptions(); }, 2000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── Show User Ledgers (with filters) ──────────────────────────────
+    async function renderUserLedgerListUI() {
+        // Load projects + users for filter dropdowns
+        let projects = [], users = [];
+        try {
+            const [pd, ud] = await Promise.all([
+                api('/chat/api/project-search/?q='),
+                api('/chat/api/all-users/'),
+            ]);
+            projects = pd.projects || [];
+            users = ud.users || [];
+        } catch (_) {}
+
+        const projOpts = `<option value="">All Projects</option>` +
+            projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+        const debtorOpts = `<option value="">All Debtors</option>` +
+            users.map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>📋 User Ledgers</h3>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                <input class="pw-search" style="flex:1;min-width:140px;margin-bottom:0" placeholder="Name se search..." type="text" id="ulSearch">
+                <select id="ulProjectFilter" style="flex:1;min-width:130px;padding:7px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px">${projOpts}</select>
+                <select id="ulDebtorFilter" style="flex:1;min-width:130px;padding:7px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px">${debtorOpts}</select>
+            </div>
+            <div class="pw-list" id="ulList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderUserLedgerOptions(); };
+
+        const listEl = card.querySelector('#ulList');
+        const searchEl = card.querySelector('#ulSearch');
+        const projFilter = card.querySelector('#ulProjectFilter');
+        const debtorFilter = card.querySelector('#ulDebtorFilter');
+
+        async function loadLedgers() {
+            listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Loading...</div>';
+            const params = new URLSearchParams();
+            if (searchEl.value.trim()) params.set('q', searchEl.value.trim());
+            if (projFilter.value) params.set('project_id', projFilter.value);
+            if (debtorFilter.value) params.set('debtor_id', debtorFilter.value);
+            try {
+                const data = await api('/chat/api/user-ledgers/?' + params.toString());
+                const ledgers = data.ledgers || [];
+                if (!ledgers.length) { listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi ledger nahi mila</div>'; return; }
+                listEl.innerHTML = '';
+                ledgers.forEach(l => {
+                    const item = document.createElement('div');
+                    item.className = 'pw-list-item';
+                    item.style.flexDirection = 'column';
+                    item.style.alignItems = 'flex-start';
+                    item.style.gap = '2px';
+                    item.innerHTML = `
+                        <span style="font-weight:600">${escapeHtml(l.creditor_name)} → ${escapeHtml(l.debtor_name)}</span>
+                        <span style="font-size:11px;color:#555">${escapeHtml(l.project_name)}</span>
+                        <span style="font-size:11px;color:#7f8c8d">Amount: Rs.${l.amount} | Balance: Rs.${l.balance}</span>
+                    `;
+                    item.onclick = () => { card.remove(); renderUserLedgerDetail(l.id); };
+                    listEl.appendChild(item);
+                });
+            } catch (e) {
+                listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        let t = null;
+        const debounced = () => { clearTimeout(t); t = setTimeout(loadLedgers, 250); };
+        searchEl.addEventListener('input', debounced);
+        projFilter.addEventListener('change', loadLedgers);
+        debtorFilter.addEventListener('change', loadLedgers);
+        loadLedgers();
+    }
+
+    // ── User Ledger Detail ────────────────────────────────────────────
+    async function renderUserLedgerDetail(ledgerId) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back to List</button>
+            <h3 id="ulDetailTitle">Loading...</h3>
+            <div class="pw-tabs">
+                <button class="pw-tab active" data-tab="ulDetails">Details</button>
+                <button class="pw-tab" data-tab="ulTransactions">Transactions (Last 6)</button>
+            </div>
+            <div class="pw-tab-panel active" id="ulDetailsPanel">Loading...</div>
+            <div class="pw-tab-panel" id="ulTransactionsPanel">Loading...</div>
+            <div class="pw-options" style="margin-top:10px">
+                <button class="pw-opt-btn" data-action="add-txn">+ Add Transaction</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderUserLedgerListUI(); };
+        card.querySelector('[data-action=add-txn]').onclick = () => { card.remove(); renderAddUserLedgerTxnForm(ledgerId); };
+
+        card.querySelectorAll('.pw-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                card.querySelectorAll('.pw-tab').forEach(t => t.classList.remove('active'));
+                card.querySelectorAll('.pw-tab-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                card.querySelector('#' + tab.dataset.tab + 'Panel').classList.add('active');
+            });
+        });
+
+        await refreshUserLedgerDetail(card, ledgerId);
+    }
+
+    async function refreshUserLedgerDetail(card, ledgerId) {
+        try {
+            const ul = await api(`/chat/api/user-ledgers/${ledgerId}/`);
+            card.querySelector('#ulDetailTitle').textContent =
+                `💳 ${ul.creditor_name} → ${ul.debtor_name}`;
+
+            card.querySelector('#ulDetailsPanel').innerHTML = `
+                <div class="pw-detail-box" style="margin-top:8px">
+                    <div class="pw-detail-row"><span>Creditor</span><span>${escapeHtml(ul.creditor_name)}</span></div>
+                    <div class="pw-detail-row"><span>Debtor</span><span>${escapeHtml(ul.debtor_name)}</span></div>
+                    <div class="pw-detail-row"><span>Project</span><span>${escapeHtml(ul.project_name)}</span></div>
+                    <div class="pw-detail-row"><span>Original Amount</span><span>Rs. ${ul.amount}</span></div>
+                    <div class="pw-detail-row"><span>Balance</span><span style="color:${ul.balance>0?'#c0392b':'#27ae60'}">Rs. ${ul.balance}</span></div>
+                </div>
+            `;
+
+            const txnPanel = card.querySelector('#ulTransactionsPanel');
+            if (!ul.transactions.length) {
+                txnPanel.innerHTML = '<div class="pw-empty" style="padding:10px">Koi transaction nahi hai</div>';
+            } else {
+                txnPanel.innerHTML = ul.transactions.map(t => `
+                    <div class="pw-payment-item">
+                        <div class="pw-pay-row">
+                            <span><strong style="color:${t.payment_type==='credited'?'#27ae60':'#e74c3c'}">${t.payment_type === 'credited' ? '▲' : '▼'} Rs. ${t.amount}</strong></span>
+                            <span>${t.paid_on || ''}</span>
+                        </div>
+                        ${t.detail ? `<div class="pw-pay-sub">${escapeHtml(t.detail)}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            card.querySelector('#ulDetailsPanel').innerHTML =
+                `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    // ── Add User Ledger Transaction ───────────────────────────────────
+    function renderAddUserLedgerTxnForm(ledgerId) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back</button>
+            <h3>➕ Add Transaction</h3>
+            <div class="pw-form-group"><label>Payment Type *</label>
+                <select name="payment_type">
+                    <option value="credited">Credited (Payment received)</option>
+                    <option value="debited">Debited (Payment made)</option>
+                </select></div>
+            <div class="pw-form-group"><label>Amount (Rs.) *</label><input name="amount" type="number" min="0.01" step="0.01" placeholder="0"></div>
+            <div class="pw-form-group"><label>Paid On *</label><input name="paid_on" type="date" value="${todayIso()}"></div>
+            <div class="pw-form-group"><label>Detail</label>
+                <textarea name="detail" rows="2"
+                    style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"
+                    placeholder="Optional notes..."></textarea></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save Transaction</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderUserLedgerDetail(ledgerId); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderUserLedgerDetail(ledgerId); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            const payload = {
+                payment_type: card.querySelector('[name=payment_type]').value,
+                amount: card.querySelector('[name=amount]').value,
+                paid_on: card.querySelector('[name=paid_on]').value,
+                detail: card.querySelector('[name=detail]').value.trim(),
+            };
+            try {
+                await api(`/chat/api/user-ledgers/${ledgerId}/add-transaction/`, {
+                    method: 'POST', body: JSON.stringify(payload),
+                });
+                card.remove();
+                renderUserLedgerDetail(ledgerId);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // =================================================================
+    // CONTEXT-AWARE SMART FORM FLOW
+    // =================================================================
+
+    function isContextMessage(text) {
+        const lower = text.toLowerCase();
+        const hasAmount = /\d{3,}/.test(text);
+        const isLong = text.trim().split(/\s+/).length > 5;
+        const hasLedger = lower.includes('ledger');
+        const hasTxn = /\b(credit|debit|credited|debited|jama|kata|payment|diye|diya|dilwaye|pay\b)\b/.test(lower);
+        return isLong && hasAmount && (hasLedger || hasTxn);
+    }
+
+    async function handleContextMessage(text) {
+        const loadCard = pwCard(`<div style="font-size:13px;color:#555">🔍 Message parse ho rahi hai...</div>`);
+        let data;
+        try {
+            data = await api('/chat/api/parse-context/', { method: 'POST', body: JSON.stringify({ text }) });
+        } catch (e) {
+            loadCard.remove();
+            // Fall through to AI
+            if (!currentSession) await newSession();
+            await sendToAI(text);
+            return;
+        }
+        loadCard.remove();
+
+        const { parsed, customer_matches, user_matches, paid_to_matches, project_matches } = data;
+
+        if (!parsed.name && !customer_matches.length && !user_matches.length) {
+            if (!currentSession) await newSession();
+            await sendToAI(text);
+            return;
+        }
+
+        // Resolve entity type
+        if (customer_matches.length > 0 && user_matches.length > 0) {
+            renderEntityTypeSelect(customer_matches, user_matches, project_matches, parsed, paid_to_matches, text);
+        } else if (customer_matches.length > 0) {
+            resolveCustomerEntity(customer_matches, project_matches, parsed, paid_to_matches);
+        } else if (user_matches.length > 0) {
+            resolveUserEntity(user_matches, project_matches, parsed, paid_to_matches);
+        } else {
+            if (!currentSession) await newSession();
+            await sendToAI(text);
+        }
+    }
+
+    async function sendToAI(text) {
+        const typing = document.createElement('div');
+        typing.className = 'typing';
+        typing.textContent = 'AI agent soch raha hai...';
+        messagesEl.appendChild(typing);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        sendBtn.disabled = true;
+        try {
+            const res = await api(`/chat/api/sessions/${currentSession}/send/`, {
+                method: 'POST', body: JSON.stringify({ text }),
+            });
+            typing.remove();
+            if (res.assistant_text) {
+                const div = document.createElement('div');
+                div.className = 'msg assistant';
+                div.innerHTML = '<div class="msg-role">assistant</div>' + escapeHtml(res.assistant_text);
+                messagesEl.appendChild(div);
+            }
+            if (res.pending_transaction) renderPreviewCard(res.pending_transaction);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            await loadSessions();
+        } catch (e) {
+            typing.remove();
+            const errDiv = document.createElement('div');
+            errDiv.className = 'error-card';
+            errDiv.textContent = 'Error: ' + e.message;
+            messagesEl.appendChild(errDiv);
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    // ── Entity type: both customer + user match ───────────────────────
+    function renderEntityTypeSelect(cMatches, uMatches, projMatches, parsed, paidToMatches, origText) {
+        const name = parsed.name || 'Selected';
+        const cOptions = cMatches.map((c, i) =>
+            `<button class="pw-opt-btn" style="margin:3px" data-ci="${i}">Customer: ${escapeHtml(c.full_name)}</button>`
+        ).join('');
+        const uOptions = uMatches.map((u, i) =>
+            `<button class="pw-opt-btn secondary" style="margin:3px" data-ui="${i}">User: ${escapeHtml(u.full_name)}</button>`
+        ).join('');
+
+        const card = pwCard(`
+            <h3>🤔 "${escapeHtml(name)}" — Customer hai ya User?</h3>
+            <div class="pw-options" style="flex-wrap:wrap">${cOptions}${uOptions}</div>
+        `);
+
+        cMatches.forEach((c, i) => {
+            card.querySelector(`[data-ci="${i}"]`).onclick = () => {
+                card.remove();
+                resolveCustomerEntity([c], projMatches, parsed, paidToMatches);
+            };
+        });
+        uMatches.forEach((u, i) => {
+            card.querySelector(`[data-ui="${i}"]`).onclick = () => {
+                card.remove();
+                resolveUserEntity([u], projMatches, parsed, paidToMatches);
+            };
+        });
+    }
+
+    // ── Resolve customer (single or multiple) ────────────────────────
+    function resolveCustomerEntity(matches, projMatches, parsed, paidToMatches) {
+        if (matches.length === 1) {
+            resolveProjectForContext(matches[0], 'customer', projMatches, parsed, paidToMatches);
+        } else {
+            const card = pwCard(`
+                <h3>👤 Customer select karo</h3>
+                <div class="pw-list" id="ctxCustList"></div>
+            `);
+            const list = card.querySelector('#ctxCustList');
+            matches.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'pw-list-item';
+                item.innerHTML = `<span>${escapeHtml(c.full_name)}</span><span class="pw-sub">${escapeHtml(c.phone_no || '')}</span>`;
+                item.onclick = () => { card.remove(); resolveProjectForContext(c, 'customer', projMatches, parsed, paidToMatches); };
+                list.appendChild(item);
+            });
+        }
+    }
+
+    // ── Resolve user (single or multiple) ────────────────────────────
+    function resolveUserEntity(matches, projMatches, parsed, paidToMatches) {
+        if (matches.length === 1) {
+            resolveProjectForContext(matches[0], 'user', projMatches, parsed, paidToMatches);
+        } else {
+            const card = pwCard(`
+                <h3>👤 User select karo</h3>
+                <div class="pw-list" id="ctxUserList"></div>
+            `);
+            const list = card.querySelector('#ctxUserList');
+            matches.forEach(u => {
+                const item = document.createElement('div');
+                item.className = 'pw-list-item';
+                item.innerHTML = `<span>${escapeHtml(u.full_name)}</span><span class="pw-sub">@${escapeHtml(u.username)}</span>`;
+                item.onclick = () => { card.remove(); resolveProjectForContext(u, 'user', projMatches, parsed, paidToMatches); };
+                list.appendChild(item);
+            });
+        }
+    }
+
+    // ── Resolve project ───────────────────────────────────────────────
+    function resolveProjectForContext(entity, type, projMatches, parsed, paidToMatches) {
+        if (projMatches && projMatches.length === 1) {
+            proceedWithContext(entity, type, projMatches[0], parsed, paidToMatches);
+        } else if (projMatches && projMatches.length > 1) {
+            const card = pwCard(`
+                <h3>📁 Project select karo</h3>
+                <div class="pw-list" id="ctxProjList"></div>
+            `);
+            projMatches.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'pw-list-item';
+                item.textContent = p.name;
+                item.onclick = () => { card.remove(); proceedWithContext(entity, type, p, parsed, paidToMatches); };
+                card.querySelector('#ctxProjList').appendChild(item);
+            });
+        } else {
+            renderContextProjectPicker(entity, type, parsed, paidToMatches);
+        }
+    }
+
+    async function renderContextProjectPicker(entity, type, parsed, paidToMatches) {
+        const card = pwCard(`
+            <h3>📋 Project select karo</h3>
+            <input class="pw-search" placeholder="Project name..." type="text">
+            <div class="pw-list" id="ctxProjPickList"><div class="pw-empty" style="padding:10px">Loading...</div></div>
+        `);
+        const listEl = card.querySelector('#ctxProjPickList');
+        const searchEl = card.querySelector('.pw-search');
+
+        async function load(q) {
+            listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Loading...</div>';
+            try {
+                const d = await api('/chat/api/project-search/?q=' + encodeURIComponent(q));
+                listEl.innerHTML = '';
+                (d.projects || []).forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'pw-list-item';
+                    item.textContent = p.name;
+                    item.onclick = () => { card.remove(); proceedWithContext(entity, type, p, parsed, paidToMatches); };
+                    listEl.appendChild(item);
+                });
+                if (!d.projects.length) listEl.innerHTML = '<div class="pw-empty" style="padding:10px">Koi project nahi mila</div>';
+            } catch (e) {
+                listEl.innerHTML = `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+        let t = null;
+        searchEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => load(searchEl.value.trim()), 250); });
+        load('');
+    }
+
+    // ── Main dispatch after entity + project resolved ─────────────────
+    function proceedWithContext(entity, type, project, parsed, paidToMatches) {
+        if (type === 'customer') {
+            handleCustomerContextFlow(entity, project, parsed, paidToMatches);
+        } else {
+            handleUserContextFlow(entity, project, parsed, paidToMatches);
+        }
+    }
+
+    // ── Customer context flow ─────────────────────────────────────────
+    async function handleCustomerContextFlow(customer, project, parsed, paidToMatches) {
+        const loadCard = pwCard(`<div style="font-size:13px;color:#555">🔍 Customer ledger dhundh raha hoon...</div>`);
+        let ledgers = [];
+        try {
+            const d = await api(`/chat/api/customer-ledger-for-project/?customer_id=${customer.id}&project_id=${project.id}`);
+            ledgers = d.ledgers || [];
+        } catch (e) {
+            loadCard.remove();
+            pwCard(`<h3>⚠️ Error</h3><div class="pw-empty">${escapeHtml(e.message)}</div>`);
+            return;
+        }
+        loadCard.remove();
+
+        if (ledgers.length === 0) {
+            renderCreateCustomerLedgerForm(customer, project, parsed);
+        } else if (ledgers.length === 1) {
+            renderCustomerLedgerDetail(ledgers[0].id, parsed, paidToMatches);
+        } else {
+            const card = pwCard(`
+                <h3>📋 ${escapeHtml(customer.full_name)} ke ledgers — Select karo</h3>
+                <div class="pw-list" id="ctxLedgerList"></div>
+            `);
+            ledgers.forEach(l => {
+                const item = document.createElement('div');
+                item.className = 'pw-list-item';
+                item.innerHTML = `<span>${l.house_label}</span><span class="pw-sub">Balance: Rs.${l.balance}</span>`;
+                item.onclick = () => { card.remove(); renderCustomerLedgerDetail(l.id, parsed, paidToMatches); };
+                card.querySelector('#ctxLedgerList').appendChild(item);
+            });
+        }
+    }
+
+    // ── Create CustomerLedger form ────────────────────────────────────
+    async function renderCreateCustomerLedgerForm(customer, project, parsed) {
+        let houses = [];
+        try {
+            const d = await api('/chat/api/project-houses/?project_id=' + project.id);
+            houses = d.houses || [];
+        } catch (_) {}
+        const houseOpts = `<option value="">-- Select House --</option>` +
+            houses.map(h => `<option value="${h.id}">${escapeHtml(h.label)}</option>`).join('');
+
+        const card = pwCard(`
+            <h3>➕ Customer Ledger Create — ${escapeHtml(customer.full_name)}</h3>
+            <div class="pw-detail-box" style="margin-bottom:10px">
+                <div class="pw-detail-row"><span>Customer</span><span>${escapeHtml(customer.full_name)}</span></div>
+                <div class="pw-detail-row"><span>Project</span><span>${escapeHtml(project.name)}</span></div>
+            </div>
+            <div class="pw-form-group"><label>House / Plot *</label><select name="house_id">${houseOpts}</select></div>
+            <div class="pw-form-group"><label>Total Amount (Rs.) *</label><input name="amount" type="number" min="0" step="0.01" placeholder="0" value="${parsed.amount || ''}"></div>
+            <div class="pw-form-group"><label>Balance (Rs.)</label><input name="balance" type="number" min="0" step="0.01" placeholder="Default = Amount" value="${parsed.amount || ''}"></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Create Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        card.querySelector('[name=amount]').addEventListener('input', function() {
+            const bal = card.querySelector('[name=balance]');
+            if (!bal._edited) bal.value = this.value;
+        });
+        card.querySelector('[name=balance]').addEventListener('input', function() { this._edited = true; });
+
+        card.querySelector('[data-action=cancel]').onclick = () => card.remove();
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            const houseId = card.querySelector('[name=house_id]').value;
+            const amount = card.querySelector('[name=amount]').value;
+            if (!houseId) { alert('House select karo'); btn.disabled = false; return; }
+            if (!amount || parseFloat(amount) <= 0) { alert('Amount daalo'); btn.disabled = false; return; }
+            try {
+                const res = await api('/chat/api/create-customer-ledger-chatbot/', {
+                    method: 'POST', body: JSON.stringify({
+                        customer_id: customer.id, project_id: project.id,
+                        project_house_id: houseId, amount,
+                        balance: card.querySelector('[name=balance]').value || amount,
+                    }),
+                });
+                card.remove();
+                renderCustomerLedgerDetail(res.ledger_id, parsed, []);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── CustomerLedger detail view ────────────────────────────────────
+    async function renderCustomerLedgerDetail(ledgerId, parsed, paidToMatches) {
+        const card = pwCard(`
+            <h3 id="clTitle">Loading...</h3>
+            <div class="pw-tabs">
+                <button class="pw-tab active" data-tab="clDetails">Details</button>
+                <button class="pw-tab" data-tab="clTransactions">Transactions (Last 6)</button>
+            </div>
+            <div class="pw-tab-panel active" id="clDetailsPanel">Loading...</div>
+            <div class="pw-tab-panel" id="clTransactionsPanel">Loading...</div>
+            <div class="pw-options" style="margin-top:10px">
+                <button class="pw-opt-btn" data-action="add-txn">+ Add Transaction</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=add-txn]').onclick = () => {
+            card.remove();
+            renderCustomerTxnFormContextual(ledgerId, parsed, paidToMatches);
+        };
+        card.querySelectorAll('.pw-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                card.querySelectorAll('.pw-tab').forEach(t => t.classList.remove('active'));
+                card.querySelectorAll('.pw-tab-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                card.querySelector('#' + tab.dataset.tab + 'Panel').classList.add('active');
+            });
+        });
+
+        try {
+            const cl = await api(`/chat/api/customer-ledger-chatbot/${ledgerId}/`);
+            card.querySelector('#clTitle').textContent =
+                `👤 ${cl.customer_name} — ${cl.project_name} (${cl.house_label})`;
+            card.querySelector('#clDetailsPanel').innerHTML = `
+                <div class="pw-detail-box" style="margin-top:8px">
+                    <div class="pw-detail-row"><span>Customer</span><span>${escapeHtml(cl.customer_name)}</span></div>
+                    <div class="pw-detail-row"><span>Project</span><span>${escapeHtml(cl.project_name)}</span></div>
+                    <div class="pw-detail-row"><span>House</span><span>${escapeHtml(cl.house_label)}</span></div>
+                    <div class="pw-detail-row"><span>Total Amount</span><span>Rs. ${cl.amount}</span></div>
+                    <div class="pw-detail-row"><span>Balance</span>
+                        <span style="color:${cl.balance>0?'#c0392b':'#27ae60'}">Rs. ${cl.balance}</span></div>
+                </div>
+            `;
+            const tp = card.querySelector('#clTransactionsPanel');
+            if (!cl.transactions.length) {
+                tp.innerHTML = '<div class="pw-empty" style="padding:10px">Koi transaction nahi hai</div>';
+            } else {
+                tp.innerHTML = cl.transactions.map(t => `
+                    <div class="pw-payment-item">
+                        <div class="pw-pay-row">
+                            <span><strong style="color:${t.payment_type==='credited'?'#27ae60':'#e74c3c'}">${t.payment_type==='credited'?'▲':'▼'} Rs. ${t.amount}</strong></span>
+                            <span>${t.paid_on}</span>
+                        </div>
+                        <div class="pw-pay-sub">${escapeHtml(t.paid_to)}${t.detail?' | '+escapeHtml(t.detail):''}</div>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            card.querySelector('#clDetailsPanel').innerHTML =
+                `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    // ── CustomerLedgerTransaction form (with pre-fill) ────────────────
+    async function renderCustomerTxnFormContextual(ledgerId, parsed, paidToMatches) {
+        // Resolve paid_to user
+        let paidToId = null, paidToName = '';
+        if (paidToMatches && paidToMatches.length === 1) {
+            paidToId = paidToMatches[0].id;
+            paidToName = paidToMatches[0].full_name;
+        } else if (paidToMatches && paidToMatches.length > 1 && parsed.paid_to_name) {
+            // Find exact username match
+            const exact = paidToMatches.find(u =>
+                u.username.toLowerCase() === (parsed.paid_to_name || '').toLowerCase()
+            );
+            if (exact) { paidToId = exact.id; paidToName = exact.full_name; }
+        }
+
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back to Ledger</button>
+            <h3>💳 Add Customer Transaction</h3>
+            <div class="pw-form-group"><label>Payment Type *</label>
+                <select name="payment_type">
+                    <option value="credited" ${parsed.payment_type==='credited'?'selected':''}>Credited</option>
+                    <option value="debited" ${parsed.payment_type==='debited'?'selected':''}>Debited</option>
+                </select></div>
+            <div class="pw-form-group"><label>Amount (Rs.) *</label>
+                <input name="amount" type="number" min="0.01" step="0.01" value="${parsed.amount||''}"></div>
+            <div class="pw-form-group"><label>Date *</label>
+                <input name="paid_on" type="date" value="${parsed.date||todayIso()}"></div>
+            <div class="pw-form-group">
+                <label>Paid To *</label>
+                <div class="pw-ac-wrap">
+                    <input name="paid_to_search" type="text" value="${escapeHtml(paidToName)}" placeholder="User name type karo..."
+                        autocomplete="off" style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit">
+                    <div class="pw-ac-drop" id="ctxPaidToDrop"></div>
+                </div>
+                <span style="font-size:11px;color:#7f8c8d" id="ctxPaidToHint">${paidToId ? '✓ Selected: '+escapeHtml(paidToName) : 'Search karke select karo'}</span>
+            </div>
+            <div class="pw-form-group"><label>Detail</label>
+                <textarea name="detail" rows="2"
+                    style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"
+                    placeholder="Optional">${escapeHtml(parsed.detail||'')}</textarea></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save Transaction</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        let selectedPaidToId = paidToId;
+        const ptInput = card.querySelector('[name=paid_to_search]');
+        const ptDrop = card.querySelector('#ctxPaidToDrop');
+        const ptHint = card.querySelector('#ctxPaidToHint');
+        let st = null;
+        ptInput.addEventListener('input', () => {
+            selectedPaidToId = null;
+            ptHint.textContent = 'Search karke select karo';
+            clearTimeout(st);
+            st = setTimeout(async () => {
+                const q = ptInput.value.trim();
+                if (!q) { ptDrop.style.display = 'none'; return; }
+                try {
+                    const d = await api('/chat/api/lookup/users/?q=' + encodeURIComponent(q));
+                    ptDrop.innerHTML = '';
+                    (d.results || []).forEach(u => {
+                        const it = document.createElement('div');
+                        it.className = 'pw-ac-item';
+                        it.textContent = u.full_name + ' (@' + u.username + ')';
+                        it.onmousedown = (e) => {
+                            e.preventDefault();
+                            selectedPaidToId = u.id;
+                            ptInput.value = u.full_name;
+                            ptHint.textContent = '✓ Selected: ' + u.full_name;
+                            ptDrop.style.display = 'none';
+                        };
+                        ptDrop.appendChild(it);
+                    });
+                    ptDrop.style.display = 'block';
+                } catch (_) {}
+            }, 250);
+        });
+        ptInput.addEventListener('blur', () => setTimeout(() => { ptDrop.style.display = 'none'; }, 150));
+
+        card.querySelector('[data-action=back]').onclick = () => {
+            card.remove();
+            renderCustomerLedgerDetail(ledgerId, parsed, paidToMatches);
+        };
+        card.querySelector('[data-action=cancel]').onclick = () => {
+            card.remove();
+            renderCustomerLedgerDetail(ledgerId, parsed, paidToMatches);
+        };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            if (!selectedPaidToId) { alert('Paid To user select karo'); return; }
+            btn.disabled = true;
+            try {
+                await api(`/chat/api/customer-ledger-chatbot/${ledgerId}/add-transaction/`, {
+                    method: 'POST', body: JSON.stringify({
+                        payment_type: card.querySelector('[name=payment_type]').value,
+                        amount: card.querySelector('[name=amount]').value,
+                        paid_on: card.querySelector('[name=paid_on]').value,
+                        paid_to_user_id: selectedPaidToId,
+                        detail: card.querySelector('[name=detail]').value.trim(),
+                    }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Transaction Saved!</h3>`);
+                setTimeout(() => { ok.remove(); renderCustomerLedgerDetail(ledgerId, {}, []); }, 1500);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── User context flow ─────────────────────────────────────────────
+    async function handleUserContextFlow(user, project, parsed, paidToMatches) {
+        const loadCard = pwCard(`<div style="font-size:13px;color:#555">🔍 User ledger dhundh raha hoon...</div>`);
+        let ledgers = [];
+        try {
+            const d = await api(`/chat/api/user-ledgers-for-creditor/?user_id=${user.id}&project_id=${project.id}`);
+            ledgers = d.ledgers || [];
+        } catch (e) {
+            loadCard.remove();
+            pwCard(`<h3>⚠️ Error</h3><div class="pw-empty">${escapeHtml(e.message)}</div>`);
+            return;
+        }
+        loadCard.remove();
+
+        if (ledgers.length === 0) {
+            renderCreateUserLedgerContextForm(user, project, parsed);
+        } else if (ledgers.length === 1) {
+            renderUserLedgerDetailContextual(ledgers[0].id, parsed, paidToMatches);
+        } else {
+            const card = pwCard(`
+                <h3>📋 ${escapeHtml(user.full_name || user.username)} ke ledgers — Select karo</h3>
+                <div class="pw-list" id="ctxULList"></div>
+            `);
+            ledgers.forEach(l => {
+                const item = document.createElement('div');
+                item.className = 'pw-list-item';
+                item.innerHTML = `<span>${escapeHtml(l.debtor_name)} ← ${escapeHtml(l.project_name)}</span><span class="pw-sub">Balance: Rs.${l.balance}</span>`;
+                item.onclick = () => { card.remove(); renderUserLedgerDetailContextual(l.id, parsed, paidToMatches); };
+                card.querySelector('#ctxULList').appendChild(item);
+            });
+        }
+    }
+
+    async function renderCreateUserLedgerContextForm(user, project, parsed) {
+        let allUsers = [];
+        try { const d = await api('/chat/api/all-users/'); allUsers = d.users || []; } catch (_) {}
+        const debtorOpts = `<option value="">-- Select Debtor --</option>` +
+            allUsers.map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+
+        const card = pwCard(`
+            <h3>➕ User Ledger Create — ${escapeHtml(user.full_name || user.username)}</h3>
+            <div class="pw-detail-box" style="margin-bottom:10px">
+                <div class="pw-detail-row"><span>Creditor</span><span>${escapeHtml(user.full_name || user.username)}</span></div>
+                <div class="pw-detail-row"><span>Project</span><span>${escapeHtml(project.name)}</span></div>
+            </div>
+            <div class="pw-form-group"><label>Debtor *</label><select name="debtor_id">${debtorOpts}</select></div>
+            <div class="pw-form-group"><label>Amount (Rs.) *</label><input name="amount" type="number" min="0.01" step="0.01" value="${parsed.amount||''}"></div>
+            <div class="pw-form-group"><label>Balance (Rs.)</label><input name="balance" type="number" min="0" step="0.01" value="${parsed.amount||''}"></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Create Ledger</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+
+        card.querySelector('[name=amount]').addEventListener('input', function() {
+            const bal = card.querySelector('[name=balance]');
+            if (!bal._edited) bal.value = this.value;
+        });
+        card.querySelector('[name=balance]').addEventListener('input', function() { this._edited = true; });
+
+        card.querySelector('[data-action=cancel]').onclick = () => card.remove();
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            try {
+                const res = await api('/chat/api/create-user-ledger/', {
+                    method: 'POST', body: JSON.stringify({
+                        creditor_id: user.id, project_id: project.id,
+                        debtor_id: card.querySelector('[name=debtor_id]').value,
+                        amount: card.querySelector('[name=amount]').value,
+                        balance: card.querySelector('[name=balance]').value || card.querySelector('[name=amount]').value,
+                    }),
+                });
+                card.remove();
+                renderUserLedgerDetailContextual(res.ledger_id, parsed, []);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+    // ── User ledger detail (contextual) ───────────────────────────────
+    async function renderUserLedgerDetailContextual(ledgerId, parsed, paidToMatches) {
+        const card = pwCard(`
+            <h3 id="ulCtxTitle">Loading...</h3>
+            <div class="pw-tabs">
+                <button class="pw-tab active" data-tab="ulCtxDetails">Details</button>
+                <button class="pw-tab" data-tab="ulCtxTransactions">Transactions (Last 6)</button>
+            </div>
+            <div class="pw-tab-panel active" id="ulCtxDetailsPanel">Loading...</div>
+            <div class="pw-tab-panel" id="ulCtxTransactionsPanel">Loading...</div>
+            <div class="pw-options" style="margin-top:10px">
+                <button class="pw-opt-btn" data-action="add-txn">+ Add Transaction</button>
+            </div>
+        `);
+
+        card.querySelector('[data-action=add-txn]').onclick = () => {
+            card.remove();
+            renderAddUserLedgerTxnContextual(ledgerId, parsed);
+        };
+        card.querySelectorAll('.pw-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                card.querySelectorAll('.pw-tab').forEach(t => t.classList.remove('active'));
+                card.querySelectorAll('.pw-tab-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                card.querySelector('#' + tab.dataset.tab + 'Panel').classList.add('active');
+            });
+        });
+
+        try {
+            const ul = await api(`/chat/api/user-ledgers/${ledgerId}/`);
+            card.querySelector('#ulCtxTitle').textContent = `💳 ${ul.creditor_name} → ${ul.debtor_name}`;
+            card.querySelector('#ulCtxDetailsPanel').innerHTML = `
+                <div class="pw-detail-box" style="margin-top:8px">
+                    <div class="pw-detail-row"><span>Creditor</span><span>${escapeHtml(ul.creditor_name)}</span></div>
+                    <div class="pw-detail-row"><span>Debtor</span><span>${escapeHtml(ul.debtor_name)}</span></div>
+                    <div class="pw-detail-row"><span>Project</span><span>${escapeHtml(ul.project_name)}</span></div>
+                    <div class="pw-detail-row"><span>Amount</span><span>Rs. ${ul.amount}</span></div>
+                    <div class="pw-detail-row"><span>Balance</span>
+                        <span style="color:${ul.balance>0?'#c0392b':'#27ae60'}">Rs. ${ul.balance}</span></div>
+                </div>
+            `;
+            const tp = card.querySelector('#ulCtxTransactionsPanel');
+            if (!ul.transactions.length) {
+                tp.innerHTML = '<div class="pw-empty" style="padding:10px">Koi transaction nahi hai</div>';
+            } else {
+                tp.innerHTML = ul.transactions.map(t => `
+                    <div class="pw-payment-item">
+                        <div class="pw-pay-row">
+                            <span><strong style="color:${t.payment_type==='credited'?'#27ae60':'#e74c3c'}">${t.payment_type==='credited'?'▲':'▼'} Rs. ${t.amount}</strong></span>
+                            <span>${t.paid_on}</span>
+                        </div>
+                        ${t.detail?`<div class="pw-pay-sub">${escapeHtml(t.detail)}</div>`:''}
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            card.querySelector('#ulCtxDetailsPanel').innerHTML =
+                `<div class="pw-empty" style="padding:10px">Error: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+
+    function renderAddUserLedgerTxnContextual(ledgerId, parsed) {
+        const card = pwCard(`
+            <button class="pw-back-btn" data-action="back">← Back to Ledger</button>
+            <h3>➕ Add User Ledger Transaction</h3>
+            <div class="pw-form-group"><label>Payment Type *</label>
+                <select name="payment_type">
+                    <option value="credited" ${parsed.payment_type==='credited'?'selected':''}>Credited</option>
+                    <option value="debited" ${parsed.payment_type==='debited'?'selected':''}>Debited</option>
+                </select></div>
+            <div class="pw-form-group"><label>Amount (Rs.) *</label>
+                <input name="amount" type="number" min="0.01" step="0.01" value="${parsed.amount||''}"></div>
+            <div class="pw-form-group"><label>Date *</label>
+                <input name="paid_on" type="date" value="${parsed.date||todayIso()}"></div>
+            <div class="pw-form-group"><label>Detail</label>
+                <textarea name="detail" rows="2"
+                    style="width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical"
+                    placeholder="Optional">${escapeHtml(parsed.detail||'')}</textarea></div>
+            <div class="pw-options">
+                <button class="pw-opt-btn" data-action="save">✓ Save</button>
+                <button class="pw-opt-btn secondary" data-action="cancel">✗ Cancel</button>
+            </div>
+        `);
+        card.querySelector('[data-action=back]').onclick = () => { card.remove(); renderUserLedgerDetailContextual(ledgerId, parsed, []); };
+        card.querySelector('[data-action=cancel]').onclick = () => { card.remove(); renderUserLedgerDetailContextual(ledgerId, parsed, []); };
+        card.querySelector('[data-action=save]').onclick = async () => {
+            const btn = card.querySelector('[data-action=save]');
+            btn.disabled = true;
+            try {
+                await api(`/chat/api/user-ledgers/${ledgerId}/add-transaction/`, {
+                    method: 'POST', body: JSON.stringify({
+                        payment_type: card.querySelector('[name=payment_type]').value,
+                        amount: card.querySelector('[name=amount]').value,
+                        paid_on: card.querySelector('[name=paid_on]').value,
+                        detail: card.querySelector('[name=detail]').value.trim(),
+                    }),
+                });
+                card.remove();
+                const ok = pwCard(`<h3>✅ Transaction Saved!</h3>`);
+                setTimeout(() => { ok.remove(); renderUserLedgerDetailContextual(ledgerId, {}, []); }, 1500);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                btn.disabled = false;
+            }
+        };
+    }
+
+})();
+</script>
+</body>
+</html>

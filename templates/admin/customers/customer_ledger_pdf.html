@@ -303,7 +303,7 @@
       </td>
       <td>{{ txn.paid_to|default:"—" }}</td>
       <td style="color:#555;">{{ txn.detail|default:"—" }}</td>
-      <td class="text-right font-bold">{{ txn.amount }}</td>
+      <td class="text-right font-bold">{{ txn.formatted_amount }}</td>
     </tr>
     {% endfor %}
   </tbody>

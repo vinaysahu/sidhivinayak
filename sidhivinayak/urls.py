@@ -23,6 +23,7 @@ from customers.views import customer_login, customer_logout, customer_dashboard,
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('chat/', include('chat.urls', namespace='chat')),
     path('customer/', customer_login, name='customer'),
     path('customer/login/', customer_login, name='login'),
     path('customer/logout/', customer_logout, name='logout'),

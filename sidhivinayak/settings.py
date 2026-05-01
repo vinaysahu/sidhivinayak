@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "projects.apps.ProjectsConfig",
     "workers.apps.WorkersConfig",
     "globals.apps.GlobalsConfig",
+    "chat.apps.ChatConfig",
     "common",
     "reports",
     'jazzmin',
@@ -62,6 +63,17 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": False,
     "show_ui_builder": True,
+
+    # AI Agent link in the top navigation - shown only to superusers via
+    # the permissions hook. Jazzmin renders the link for everyone, so the
+    # /chat/ view itself enforces the superuser check.
+    "topmenu_links": [
+        {
+            "name": "🤖 AI Agent",
+            "url": "/chat/",
+            "permissions": ["auth.view_user"],
+        },
+    ],
 
     "site_title": "Siddhi Vinayak Estate Developers Admin",
     "site_header": "Siddhi Vinayak Estate Developers",

@@ -40,6 +40,8 @@ def format_indian_currency(amount):
     else:
         formatted_int = last3
 
+    if decimal_part == "00":
+        return f"₹ {prefix}{formatted_int}"
     return f"₹ {prefix}{formatted_int}.{decimal_part}"
 
 def amount_to_words(amount):
