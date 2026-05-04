@@ -1,13 +1,12 @@
 """
-Gemini AI agent (LangChain) that converts natural-language Hindi/English
+Gemini AI agent (LangChain + LangGraph) that converts natural-language Hindi/English
 instructions into preview proposals across customer ledger transactions,
 supplier payments, and worker attendance, AND answers read-only questions
 about customer balances, project expenses, and supplier dues.
 
-Uses LangChain's create_tool_calling_agent + AgentExecutor with Google
-Gemini 2.5 Flash. The propose_* tools return preview payloads that the
-caller (views.py) persists as a PendingTransaction and shows to the user
-for confirmation.
+Uses LangGraph's create_react_agent with Google Gemini 2.5 Flash.
+The propose_* tools return preview payloads that the caller (views.py)
+persists as a PendingTransaction and shows to the user for confirmation.
 """
 import json
 import logging
@@ -15,9 +14,8 @@ import os
 from datetime import date
 from typing import Dict, List, Optional
 
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.prebuilt import create_react_agent
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 
 # `langchain_google_genai` is an optional install. Import it lazily inside
@@ -487,28 +485,51 @@ def _build_llm():
     )
 
 
-def _build_executor() -> AgentExecutor:
+def _build_executor():
+    """Build a LangGraph react agent (replaces AgentExecutor)."""
     llm = _build_llm()
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", _system_prompt()),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
-    agent = create_tool_calling_agent(llm, TOOLS, prompt)
-    return AgentExecutor(
-        agent=agent,
+    return create_react_agent(
+        model=llm,
         tools=TOOLS,
-        return_intermediate_steps=True,
-        max_iterations=MAX_ITERATIONS,
-        verbose=False,
-        handle_parsing_errors=True,
+        prompt=_system_prompt(),
     )
 
 
-def _extract_proposal(intermediate_steps) -> Optional[Dict]:
+def _extract_steps_from_messages(messages: list) -> list:
+    """Reconstruct intermediate steps from LangGraph messages list so that
+    the existing _extract_proposal() works without any changes."""
+    tool_call_map = {}
+    steps = []
+
+    for msg in messages:
+        cls = msg.__class__.__name__
+
+        # AIMessage with tool_calls -> store them by id
+        if cls == "AIMessage" and getattr(msg, "tool_calls", None):
+            for tc in msg.tool_calls:
+                tool_call_map[tc["id"]] = tc
+
+        # ToolMessage -> pair with its AIMessage tool call
+        elif cls == "ToolMessage":
+            tc = tool_call_map.get(msg.tool_call_id)
+            if tc:
+                action = type("FakeAction", (), {"tool": tc["name"]})()
+                try:
+                    obs = (
+                        json.loads(msg.content)
+                        if isinstance(msg.content, str)
+                        else msg.content
+                    )
+                except (json.JSONDecodeError, TypeError):
+                    obs = msg.content
+                steps.append((action, obs))
+
+    return steps
+
+
+def _extract_proposal(intermediate_steps: list) -> Optional[Dict]:
     """Find the latest successful propose_* call and return its preview
-    (with `kind` baked in)."""
+    (with `kind` baked in). Unchanged from original."""
     proposal = None
     for action, observation in intermediate_steps:
         tool_name = getattr(action, "tool", None)
@@ -527,8 +548,9 @@ def _extract_proposal(intermediate_steps) -> Optional[Dict]:
 
         if parsed.get("ok") and parsed.get("preview"):
             preview = dict(parsed["preview"])
-            # Make sure kind is on the preview itself for downstream consumers.
-            preview.setdefault("kind", parsed.get("kind") or _kind_from_tool(tool_name))
+            preview.setdefault(
+                "kind", parsed.get("kind") or _kind_from_tool(tool_name)
+            )
             proposal = preview
     return proposal
 
@@ -542,13 +564,14 @@ def _kind_from_tool(tool_name: str) -> str:
 
 
 def run_turn(history_messages: List[Dict], user_input: str) -> Dict:
-    """Run one user turn through the LangChain agent.
+    """Run one user turn through the LangGraph react agent.
 
     Returns:
         dict with keys:
             - assistant_text: final text response shown to the user
             - proposal: preview dict (with `kind`) or None
     """
+    # Build chat history
     chat_history = []
     for m in history_messages:
         content = m.get("content")
@@ -559,23 +582,36 @@ def run_turn(history_messages: List[Dict], user_input: str) -> Dict:
         elif m.get("role") == "assistant":
             chat_history.append(AIMessage(content=content))
 
+    # Add current user message
+    messages = chat_history + [HumanMessage(content=user_input)]
+
     executor = _build_executor()
-    result = executor.invoke({
-        "input": user_input,
-        "chat_history": chat_history,
-    })
+    result = executor.invoke(
+        {"messages": messages},
+        {"recursion_limit": MAX_ITERATIONS * 2},
+    )
 
-    final_text = result.get("output") or ""
-    if not isinstance(final_text, str):
-        try:
-            final_text = "".join(
-                p.get("text", "") if isinstance(p, dict) else str(p)
-                for p in final_text
-            )
-        except Exception:
-            final_text = str(final_text)
+    # Extract final assistant text (last AIMessage without tool_calls)
+    final_text = ""
+    for msg in reversed(result["messages"]):
+        if (
+            msg.__class__.__name__ == "AIMessage"
+            and not getattr(msg, "tool_calls", None)
+        ):
+            content = msg.content
+            if isinstance(content, str):
+                final_text = content
+            elif isinstance(content, list):
+                # Gemini sometimes returns list of content blocks
+                final_text = "".join(
+                    p.get("text", "") if isinstance(p, dict) else str(p)
+                    for p in content
+                )
+            break
 
-    proposal = _extract_proposal(result.get("intermediate_steps", []))
+    # Reconstruct intermediate steps for proposal extraction
+    intermediate_steps = _extract_steps_from_messages(result["messages"])
+    proposal = _extract_proposal(intermediate_steps)
 
     return {
         "assistant_text": final_text.strip(),
