@@ -1,4 +1,82 @@
 {% load i18n admin_urls static admin_modify %}
+
+<style>
+/* ── Mobile card layout ─────────────────────────────────── */
+@media (max-width: 767px) {
+  .ul-resp-table { white-space: normal !important; }
+
+  .ul-resp-table thead { display: none; }
+
+  .ul-resp-table tbody tr {
+    display: block;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+
+  /* "Add" empty row gets a dashed border */
+  .ul-resp-table tbody tr.empty-form {
+    border-style: dashed;
+    background: #fafafa;
+  }
+
+  .ul-resp-table tbody tr td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .ul-resp-table tbody tr td:last-child { border-bottom: none; }
+
+  .ul-resp-table tbody tr td.original {
+    justify-content: flex-end;
+    background: #f8f9fa;
+    padding: 6px 10px;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .ul-resp-table tbody tr td.original:empty { display: none; }
+
+  .ul-resp-table tbody tr td.delete {
+    justify-content: flex-end;
+    color: #dc3545;
+    font-size: 12px;
+    background: #fff5f5;
+    border-top: 1px solid #f5c6cb;
+  }
+
+  .ul-resp-table tbody tr td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    min-width: 80px;
+    flex-shrink: 0;
+    margin-right: 10px;
+    padding-top: 3px;
+  }
+  .ul-resp-table tbody tr td.original::before,
+  .ul-resp-table tbody tr td.delete::before { content: none; }
+
+  /* Make form inputs fill available width on mobile */
+  .ul-resp-table input,
+  .ul-resp-table select,
+  .ul-resp-table textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+</style>
+
 <div class="js-inline-admin-formset inline-group" id="{{ inline_admin_formset.formset.prefix }}-group"
      data-inline-type="tabular"
      data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
@@ -6,7 +84,9 @@
         {{ inline_admin_formset.formset.management_form }}
         <fieldset class="module {{ inline_admin_formset.classes }}">
             {{ inline_admin_formset.formset.non_form_errors }}
-            <table class="table table-hover text-nowrap">
+
+            <div style="overflow-x:auto;">
+            <table class="table table-hover text-nowrap ul-resp-table">
                 <thead><tr>
                     <th class="original"></th>
                     {% for field in inline_admin_formset.fields %}
@@ -31,9 +111,8 @@
                             <p>
                                 {% if inline_admin_form.original %}
                                     {% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %}
-                                        <a
-                                            href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}"
-                                            class="{% if inline_admin_formset.has_change_permission %}inlinechangelink{% else %}inlineviewlink{% endif %}">
+                                        <a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}"
+                                           class="{% if inline_admin_formset.has_change_permission %}inlinechangelink{% else %}inlineviewlink{% endif %}">
                                             {% if inline_admin_formset.has_change_permission %}
                                                 <i class="fas fa-pencil-alt fa-sm"> </i>
                                             {% else %}
@@ -41,7 +120,6 @@
                                             {% endif %}
                                         </a>
                                     {% endif %}
-
                                     {% if inline_admin_form.show_url %}
                                         <a href="{{ inline_admin_form.absolute_url }}" title="{% trans "View on site" %}">
                                             <i class="fas fa-eye fa-sm"> </i>
@@ -89,7 +167,8 @@
                 {% endfor %}
                 </tbody>
             </table>
-            
+            </div>
+
             {# --- PAGINATION CONTROLS --- #}
             {% if inline_admin_formset.formset.page_obj.paginator.num_pages > 1 %}
             <div class="card-footer clearfix">
@@ -108,7 +187,32 @@
                 </ul>
             </div>
             {% endif %}
-            
+
         </fieldset>
     </div>
 </div>
+
+<script>
+/* Add data-label to every td so CSS ::before can show column names on mobile */
+(function () {
+    function labelTables() {
+        document.querySelectorAll('.ul-resp-table').forEach(function (table) {
+            var ths = table.querySelectorAll('thead th');
+            var labels = Array.prototype.map.call(ths, function (th) {
+                return th.textContent.trim();
+            });
+            table.querySelectorAll('tbody tr').forEach(function (row) {
+                var tds = row.querySelectorAll('td');
+                tds.forEach(function (td, i) {
+                    if (labels[i]) td.setAttribute('data-label', labels[i]);
+                });
+            });
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', labelTables);
+    } else {
+        labelTables();
+    }
+})();
+</script>

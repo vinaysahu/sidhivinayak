@@ -51,8 +51,31 @@
 <div class="row">
     <div class="col-12">
         <div class="glass-card">
-            <div class="p-3 p-md-4 pb-2 pb-md-2">
+            <div class="p-3 p-md-4 pb-2 pb-md-2 d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Payment Transactions</h4>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        &#8659; Download
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'customer_download_pdf' %}">
+                                &#128196; PDF
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'customer_download_excel' %}">
+                                &#128202; Excel
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'customer_download_csv' %}">
+                                &#128203; CSV
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
             <!-- table-responsive for horizontal scroll on mobile -->
             <div class="table-responsive table-container">

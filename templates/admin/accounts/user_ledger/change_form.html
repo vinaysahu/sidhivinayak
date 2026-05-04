@@ -1,0 +1,35 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if download_pdf_url %}
+  <li>
+    <div class="dropdown d-inline-block">
+      <button type="button"
+        class="btn btn-sm btn-primary dropdown-toggle"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        style="font-size:13px;font-weight:500;white-space:nowrap;padding:6px 14px;">
+        &#128196; Download Ledger
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <a class="dropdown-item" href="{{ download_pdf_url }}" target="_blank">
+            &#128196;&nbsp; PDF
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{{ download_excel_url }}" target="_blank">
+            &#128202;&nbsp; Excel
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{{ download_csv_url }}" target="_blank">
+            &#128203;&nbsp; CSV
+          </a>
+        </li>
+      </ul>
+    </div>
+  </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

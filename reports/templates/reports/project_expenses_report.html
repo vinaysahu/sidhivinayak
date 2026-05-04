@@ -1,0 +1,297 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Project Expenses Report{% endblock %}
+{% block content_title %}<h2 class="mb-0"><i class="fas fa-file-invoice-dollar mr-2"></i>Project Expenses Report</h2>{% endblock %}
+
+{% block content %}
+
+{# ── Filter Card ─────────────────────────────────────────────────────────── #}
+<div class="card card-primary card-outline shadow-sm mb-4">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter</h3>
+  </div>
+  <div class="card-body">
+    <form method="get" id="expenseForm">
+      <div class="row">
+        <div class="col-md-8">
+          <div class="form-group mb-2">
+            <label for="id_project" class="font-weight-bold text-muted small mb-1">
+              <i class="fas fa-building mr-1"></i>Project
+            </label>
+            {{ form.project }}
+          </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="form-group mb-2 w-100">
+            <button type="submit" class="btn btn-primary btn-block">
+              <i class="fas fa-search mr-1"></i>Generate
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if report %}
+
+{# ── Summary Cards ───────────────────────────────────────────────────────── #}
+<div class="row mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="small-box bg-orange">
+      <div class="inner">
+        <p class="mb-0" style="font-size:1rem;font-weight:700">{{ report.pl_supplier }}</p>
+        <p class="mb-0" style="font-size:0.75rem">Supplier Payments</p>
+      </div>
+      <div class="icon"><i class="fas fa-truck"></i></div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="small-box bg-info">
+      <div class="inner">
+        <p class="mb-0" style="font-size:1rem;font-weight:700">{{ report.pl_worker }}</p>
+        <p class="mb-0" style="font-size:0.75rem">Worker Payments</p>
+      </div>
+      <div class="icon"><i class="fas fa-hard-hat"></i></div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <p class="mb-0" style="font-size:1rem;font-weight:700">{{ report.pl_other }}</p>
+        <p class="mb-0" style="font-size:0.75rem">Other Expenses</p>
+      </div>
+      <div class="icon"><i class="fas fa-receipt"></i></div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="small-box bg-danger">
+      <div class="inner">
+        <p class="mb-0" style="font-size:1rem;font-weight:700">{{ report.grand_total }}</p>
+        <p class="mb-0" style="font-size:0.75rem">Total Expenses</p>
+      </div>
+      <div class="icon"><i class="fas fa-rupee-sign"></i></div>
+    </div>
+  </div>
+</div>
+
+{# ── Data Tables (side by side) ──────────────────────────────────────────── #}
+<div class="row">
+
+  {# Project Ledger breakdown #}
+  <div class="col-lg-4 mb-4">
+    <div class="card card-outline card-warning shadow-sm h-100">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-book mr-1"></i>Project Ledger
+          <small class="text-muted ml-1">({{ selected_project.name }})</small>
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="thead-dark">
+            <tr>
+              <th>Entry Type</th>
+              <th class="text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><i class="fas fa-truck text-orange mr-1"></i>Supplier Payments</td>
+              <td class="text-right font-weight-bold">{{ report.pl_supplier }}</td>
+            </tr>
+            <tr>
+              <td><i class="fas fa-hard-hat text-info mr-1"></i>Worker Payments</td>
+              <td class="text-right font-weight-bold">{{ report.pl_worker }}</td>
+            </tr>
+            <tr>
+              <td><i class="fas fa-receipt text-warning mr-1"></i>Other Expenses</td>
+              <td class="text-right font-weight-bold">{{ report.pl_other }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="bg-light">
+              <th>Total</th>
+              <th class="text-right text-danger">{{ report.pl_total }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# User Ledger entries #}
+  <div class="col-lg-8 mb-4">
+    <div class="card card-outline card-primary shadow-sm h-100">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-users mr-1"></i>User Ledger Entries
+          {% if report.ul_rows %}
+          <span class="badge badge-primary ml-2">{{ report.ul_rows|length }}</span>
+          {% endif %}
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        {% if report.ul_rows %}
+        <table class="table table-hover table-striped mb-0">
+          <thead class="thead-dark">
+            <tr>
+              <th style="width:40px">#</th>
+              <th><i class="fas fa-user mr-1"></i>Creditor</th>
+              <th><i class="fas fa-user mr-1"></i>Debtor</th>
+              <th class="text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.ul_rows %}
+            <tr>
+              <td class="text-muted">{{ forloop.counter }}</td>
+              <td class="font-weight-bold">{{ row.creditor }}</td>
+              <td>{{ row.debtor }}</td>
+              <td class="text-right font-weight-bold text-primary">{{ row.amount }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="bg-light">
+              <th colspan="3" class="text-right">Total</th>
+              <th class="text-right text-primary">{{ report.ul_total }}</th>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div class="p-3 text-muted">
+          <i class="fas fa-info-circle mr-1"></i>No user ledger entries for this project.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Grand Total Banner ──────────────────────────────────────────────────── #}
+<div class="callout callout-danger">
+  <h5 class="mb-0">
+    <i class="fas fa-calculator mr-2"></i>
+    Total Expenses &nbsp;=&nbsp;
+    <span class="text-danger font-weight-bold" style="font-size:1.1rem;">{{ report.grand_total }}</span>
+    <small class="text-muted ml-3">
+      (Project Ledger {{ report.pl_total }} + User Ledger {{ report.ul_total }})
+    </small>
+  </h5>
+</div>
+
+{# ── Chart ───────────────────────────────────────────────────────────────── #}
+<hr class="mt-4 mb-4">
+<div class="d-flex align-items-center mb-3">
+  <i class="fas fa-chart-pie fa-lg text-primary mr-2"></i>
+  <h4 class="mb-0 font-weight-bold">Expense Breakdown</h4>
+</div>
+
+<div class="row">
+  <div class="col-lg-5 mb-4">
+    <div class="card card-outline card-primary shadow-sm">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i>Expense Distribution</h3>
+      </div>
+      <div class="card-body" style="position:relative;height:280px;">
+        <canvas id="chartPie"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7 mb-4">
+    <div class="card card-outline card-warning shadow-sm">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i>Category-wise Amount</h3>
+      </div>
+      <div class="card-body" style="position:relative;height:280px;">
+        <canvas id="chartBar"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var labels  = ['Supplier Payments', 'Worker Payments', 'Other Expenses', 'User Ledger'];
+  var amounts = [
+    {{ report.pl_supplier_raw }},
+    {{ report.pl_worker_raw }},
+    {{ report.pl_other_raw }},
+    {{ report.ul_total_raw }},
+  ];
+  var colors = ['#f39c12', '#17a2b8', '#ffc107', '#007bff'];
+
+  function rupeeLabel(val) {
+    if (val >= 10000000) return '₹' + (val/10000000).toFixed(1) + 'Cr';
+    if (val >= 100000)   return '₹' + (val/100000).toFixed(1) + 'L';
+    if (val >= 1000)     return '₹' + (val/1000).toFixed(1) + 'K';
+    return '₹' + val;
+  }
+
+  var tooltipCb = {
+    callbacks: {
+      label: function(ctx) {
+        var val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed;
+        return ' ₹' + val.toLocaleString('en-IN');
+      }
+    }
+  };
+
+  // Pie chart
+  new Chart(document.getElementById('chartPie'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{ data: amounts, backgroundColor: colors, borderWidth: 2 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: function(ctx) {
+          return ' ' + ctx.label + ': ₹' + ctx.parsed.toLocaleString('en-IN');
+        }}}
+      }
+    }
+  });
+
+  // Bar chart
+  new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Amount',
+        data: amounts,
+        backgroundColor: colors,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx) {
+          return ' ₹' + ctx.parsed.y.toLocaleString('en-IN');
+        }}}
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: function(v) { return rupeeLabel(v); } }
+        }
+      }
+    }
+  });
+})();
+</script>
+
+{% endif %}
+
+{% endblock %}

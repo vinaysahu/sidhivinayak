@@ -28,7 +28,7 @@ class CustomerLedgerTransactionAdmin(admin.ModelAdmin):
     list_select_related = True
     form = CustomerLedgerTransactionForm
 
-    list_display = ['paid_on', 'paid_to', 'payment_type','formatted_amount','detail' ] # grid mae kaisa view
+    list_display = ['customer_ledger', 'paid_on', 'paid_to', 'payment_type', 'formatted_amount', 'detail']
     exclude = ('created_at', 'updated_at')
 
     # list_filter = [customDropdownFilterForAnotherTable("Customer Ledger", "Customer Ledger", "customer_id", CustomerLedger, ["customer_ledger__customer_id"]  ), 'paid_to']

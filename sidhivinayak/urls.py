@@ -19,7 +19,11 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from projects.views import get_worker_wages
-from customers.views import customer_login, customer_logout, customer_dashboard, customer_request_dashboard, customer_request_list
+from customers.views import (
+    customer_login, customer_logout, customer_dashboard,
+    customer_request_dashboard, customer_request_list,
+    customer_download_pdf, customer_download_excel, customer_download_csv,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -31,6 +35,9 @@ urlpatterns = [
     path('customer/dashboard/', customer_dashboard, name='dashboard'),
     path('customer/requests/', customer_request_dashboard, name='ledger update request'),
     path('customer/requests/list/', customer_request_list, name='ledger list request'),
+    path('customer/download/pdf/',   customer_download_pdf,   name='customer_download_pdf'),
+    path('customer/download/excel/', customer_download_excel, name='customer_download_excel'),
+    path('customer/download/csv/',   customer_download_csv,   name='customer_download_csv'),
     path("projects/get-worker-wages/", get_worker_wages, name="get-worker-wages"),
     path('reports/', include('reports.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
