@@ -56,7 +56,7 @@ def auto_create_user_ledger_transaction(sender, instance, created, **kwargs):
                 return
 
             # STEP 4: Create UserLedgerTransaction
-            detail_prefix = f"Auto-entry from CustomerLedger #{customer_ledger.id} | "
+            detail_prefix = f"Auto-entry from CustomerLedger #{customer_ledger.customer_id.username} | "
             full_detail = detail_prefix + (instance.detail or "")
 
             UserLedgerTransaction.objects.create(
