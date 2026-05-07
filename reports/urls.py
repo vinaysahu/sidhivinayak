@@ -8,4 +8,6 @@ urlpatterns = [
     path('user-customer-ledger/pdf/', views.download_report_pdf, name='user_customer_ledger_pdf'),
     path('ajax/projects-for-user/', views.get_projects_for_user, name='ajax_projects_for_user'),
     path('project-expenses/', views.project_expenses_report, name='project_expenses'),
+    path('customer-report/', views.customer_report, name='customer_report'),
+    path('customer-report/pdf/', views.download_customer_report_pdf, name='customer_report_pdf'),
 ]

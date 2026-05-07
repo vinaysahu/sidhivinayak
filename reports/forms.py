@@ -14,6 +14,15 @@ class ProjectExpenseFilterForm(forms.Form):
     )
 
 
+class CustomerReportFilterForm(forms.Form):
+    project = forms.ModelChoiceField(
+        queryset=Projects.objects.all().order_by('name'),
+        label="Project",
+        empty_label="-- Select Project --",
+        widget=forms.Select(attrs={'class': 'form-control select2'}),
+    )
+
+
 class UserCustomerLedgerFilterForm(forms.Form):
     user = forms.ModelChoiceField(
         queryset=User.objects.all().order_by('username'),

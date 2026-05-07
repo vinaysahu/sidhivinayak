@@ -13,3 +13,10 @@ class ProjectExpenses(models.Model):
         managed = False
         verbose_name = 'Project Expenses'
         verbose_name_plural = 'Project Expenses Report'
+
+
+class CustomerReport(models.Model):
+    class Meta:
+        managed = False
+        verbose_name = 'Customer Report'
+        verbose_name_plural = 'Customer Report'

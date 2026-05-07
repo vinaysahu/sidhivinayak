@@ -7,7 +7,7 @@
 {% block content %}
 
 {# ── Filter Card ─────────────────────────────────────────────────────────── #}
-<div class="card card-primary card-outline shadow-sm mb-4">
+<div class="card card-primary card-outline shadow-sm mb-4 col-md-12">
   <div class="card-header">
     <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter</h3>
   </div>
@@ -37,7 +37,7 @@
 {% if report %}
 
 {# ── Summary Cards ───────────────────────────────────────────────────────── #}
-<div class="row mb-4">
+<div class="row mb-4 col-md-12">
   <div class="col-sm-6 col-lg-3">
     <div class="small-box bg-orange">
       <div class="inner">
@@ -77,6 +77,7 @@
 </div>
 
 {# ── Data Tables (side by side) ──────────────────────────────────────────── #}
+<div class="col-md-12">
 <div class="row">
 
   {# Project Ledger breakdown #}
@@ -170,9 +171,10 @@
   </div>
 
 </div>
+</div>
 
 {# ── Grand Total Banner ──────────────────────────────────────────────────── #}
-<div class="callout callout-danger">
+<div class="callout callout-danger col-md-12">
   <h5 class="mb-0">
     <i class="fas fa-calculator mr-2"></i>
     Total Expenses &nbsp;=&nbsp;
@@ -184,12 +186,12 @@
 </div>
 
 {# ── Chart ───────────────────────────────────────────────────────────────── #}
-<hr class="mt-4 mb-4">
+<hr class="mt-4 mb-4 ">
 <div class="d-flex align-items-center mb-3">
   <i class="fas fa-chart-pie fa-lg text-primary mr-2"></i>
   <h4 class="mb-0 font-weight-bold">Expense Breakdown</h4>
 </div>
-
+<div class=" col-md-12">
 <div class="row">
   <div class="col-lg-5 mb-4">
     <div class="card card-outline card-primary shadow-sm">
@@ -211,6 +213,7 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
