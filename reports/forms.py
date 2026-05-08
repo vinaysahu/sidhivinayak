@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from projects.models.Projects import Projects
+from customers.models.Customers import Customers
+from customers.models.CustomerLedger import CustomerLedger
 
 User = get_user_model()
 
@@ -68,3 +70,35 @@ class UserCustomerLedgerFilterForm(forms.Form):
             .values_list('customer_ledger__project_id', flat=True)
             .distinct()
         )
+
+
+class CustomerUserLedgerFilterForm(forms.Form):
+    project = forms.ModelChoiceField(
+        queryset=Projects.objects.all().order_by('name'),
+        label="Project",
+        empty_label="-- Select Project --",
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_cul_project'}),
+    )
+    customer = forms.ModelChoiceField(
+        queryset=Customers.objects.none(),
+        label="Customer",
+        empty_label="-- Select Customer --",
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_cul_customer'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'project' in self.data:
+            try:
+                project_id = int(self.data.get('project'))
+                customer_ids = (
+                    CustomerLedger.objects
+                    .filter(project_id_id=project_id)
+                    .values_list('customer_id_id', flat=True)
+                    .distinct()
+                )
+                self.fields['customer'].queryset = Customers.objects.filter(
+                    id__in=customer_ids
+                ).order_by('first_name', 'last_name')
+            except (ValueError, TypeError):
+                pass

@@ -154,10 +154,16 @@ def send_message(request, session_id: int):
     if not text:
         return JsonResponse({"error": "Empty message"}, status=400)
 
+    project_id = body.get("project_id")
+    project_name = (body.get("project_name") or "").strip()
+    if project_id and project_name:
+        text = f'[Active project: "{project_name}" (ID: {project_id})] {text}'
+
     history = _build_history(session)
 
+    display_text = (body.get("text") or "").strip()
     user_msg = ChatMessage.objects.create(
-        session=session, role="user", content=text
+        session=session, role="user", content=display_text
     )
 
     if not session.title:

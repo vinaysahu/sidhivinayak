@@ -196,6 +196,33 @@
             .preview-label, .form-label { width: 110px; }
         }
 
+        /* Project selection modal */
+        .proj-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200; display: flex; align-items: center; justify-content: center; }
+        .proj-modal-overlay.hidden { display: none; }
+        .proj-modal { background: #fff; border-radius: 10px; padding: 24px; width: 420px; max-width: 92vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+        .proj-modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #2c3e50; }
+        .proj-modal p { font-size: 13px; color: #7f8c8d; margin-bottom: 14px; }
+        .proj-modal-search { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 10px; font-family: inherit; outline: none; }
+        .proj-modal-search:focus { border-color: #2980b9; box-shadow: 0 0 0 2px rgba(41,128,185,0.15); }
+        .proj-modal-list { max-height: 280px; overflow-y: auto; border: 1px solid #e8e8e8; border-radius: 6px; }
+        .proj-modal-item { padding: 11px 14px; cursor: pointer; border-bottom: 1px solid #f2f2f2; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
+        .proj-modal-item:last-child { border-bottom: none; }
+        .proj-modal-item:hover { background: #eaf4ff; }
+        .proj-modal-item .proj-status { font-size: 11px; color: #7f8c8d; margin-left: auto; white-space: nowrap; }
+        .proj-modal-empty { padding: 16px; text-align: center; color: #7f8c8d; font-size: 13px; font-style: italic; }
+
+        /* Selected project badge in header */
+        .proj-badge { display: inline-flex; align-items: center; gap: 6px; background: #eaf4ff; border: 1px solid #2980b9; color: #1a5276; border-radius: 20px; padding: 4px 12px; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 10px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; transition: background 0.15s; }
+        .proj-badge:hover { background: #d6eaff; }
+        .proj-badge .proj-badge-icon { font-size: 12px; flex-shrink: 0; }
+        .proj-badge .proj-badge-change { font-size: 11px; color: #2980b9; margin-left: 4px; flex-shrink: 0; }
+
+        /* Disabled state for input area when no project */
+        .input-locked textarea { background: #f8f9fa; color: #aaa; cursor: not-allowed; }
+        .input-locked .send-btn, .input-locked .mic-btn { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+        .no-project-hint { text-align: center; font-size: 12px; color: #e67e22; padding: 5px 0 0; display: none; }
+        .input-locked .no-project-hint { display: block; }
+
         @media (max-width: 420px) {
             .sidebar { width: 80vw; }
             .send-btn { padding: 10px 10px; }
@@ -203,6 +230,18 @@
     </style>
 </head>
 <body>
+<!-- Project Selection Modal -->
+<div class="proj-modal-overlay" id="projModalOverlay">
+    <div class="proj-modal">
+        <h3>📁 Project Select Karo</h3>
+        <p>Chat shuru karne se pehle ek project choose karo. Aap baad mein ise change bhi kar sakte ho.</p>
+        <input class="proj-modal-search" id="projModalSearch" type="text" placeholder="Project ka naam search karo...">
+        <div class="proj-modal-list" id="projModalList">
+            <div class="proj-modal-empty">Loading projects...</div>
+        </div>
+    </div>
+</div>
+
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="layout">
     <aside class="sidebar" id="sidebar">
@@ -218,6 +257,11 @@
         <div class="main-header" id="mainHeader">
             <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">&#9776;</button>
             <span id="mainHeaderText">Select or start a chat</span>
+            <span class="proj-badge" id="projBadge" style="display:none" title="Project change karne ke liye click karo">
+                <span class="proj-badge-icon">📁</span>
+                <span id="projBadgeName"></span>
+                <span class="proj-badge-change">▼ change</span>
+            </span>
         </div>
         <div class="keyword-container" id="keywordContainer">
             <div class="keyword-chip" data-keyword="Project Workers">👷 Project Workers</div>
@@ -241,7 +285,7 @@
         <div class="suggestion-hint" id="suggestionHint">
             Kya aap <strong id="suggestedKeyword"></strong> ke baare mein baat kar rahe hain? Use karne ke liye click karein.
         </div>
-        <div class="input-area">
+        <div class="input-area input-locked" id="inputArea">
             <div class="input-row">
                 <span class="lang-toggle">
                     Mic:
@@ -251,10 +295,11 @@
                         <option value="en-US">English (US)</option>
                     </select>
                 </span>
-                <textarea id="input" placeholder="Type or click mic to speak..." rows="1"></textarea>
-                <button class="mic-btn" id="micBtn" title="Click to start/stop recording">🎤</button>
-                <button class="send-btn" id="sendBtn">Send</button>
+                <textarea id="input" placeholder="Pehle project select karo..." rows="1" disabled></textarea>
+                <button class="mic-btn" id="micBtn" title="Click to start/stop recording" disabled>🎤</button>
+                <button class="send-btn" id="sendBtn" disabled>Send</button>
             </div>
+            <div class="no-project-hint">⬆ Upar project select karo, phir message type karo</div>
         </div>
     </main>
 </div>
@@ -277,6 +322,80 @@
     const keywordContainer = document.getElementById('keywordContainer');
     const suggestionHint = document.getElementById('suggestionHint');
     const suggestedKeywordEl = document.getElementById('suggestedKeyword');
+
+    // -----------------------------------------------------------------
+    // Project Selection
+    // -----------------------------------------------------------------
+    let selectedProject = null;  // { id, name }
+
+    const projModalOverlay = document.getElementById('projModalOverlay');
+    const projModalSearch  = document.getElementById('projModalSearch');
+    const projModalList    = document.getElementById('projModalList');
+    const projBadge        = document.getElementById('projBadge');
+    const projBadgeName    = document.getElementById('projBadgeName');
+    const inputArea        = document.getElementById('inputArea');
+
+    let allProjects = [];
+
+    async function loadProjectsForModal() {
+        projModalList.innerHTML = '<div class="proj-modal-empty">Loading...</div>';
+        try {
+            const data = await api('/chat/api/project-search/?q=');
+            allProjects = data.projects || [];
+            renderProjectList(allProjects);
+        } catch (e) {
+            projModalList.innerHTML = '<div class="proj-modal-empty">Load karne mein error aaya.</div>';
+        }
+    }
+
+    function renderProjectList(projects) {
+        if (!projects.length) {
+            projModalList.innerHTML = '<div class="proj-modal-empty">Koi project nahi mila.</div>';
+            return;
+        }
+        projModalList.innerHTML = '';
+        projects.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'proj-modal-item';
+            item.innerHTML = `
+                <span>📁 ${escapeHtml(p.name)}</span>
+                <span class="proj-status">${escapeHtml(p.status || '')}</span>
+            `;
+            item.onclick = () => selectProject(p);
+            projModalList.appendChild(item);
+        });
+    }
+
+    projModalSearch.addEventListener('input', () => {
+        const q = projModalSearch.value.toLowerCase();
+        const filtered = allProjects.filter(p => p.name.toLowerCase().includes(q));
+        renderProjectList(filtered);
+    });
+
+    function selectProject(project) {
+        selectedProject = project;
+        projBadgeName.textContent = project.name;
+        projBadge.style.display = 'inline-flex';
+        projModalOverlay.classList.add('hidden');
+        // Unlock input
+        inputArea.classList.remove('input-locked');
+        inputEl.disabled = false;
+        micBtn.disabled = false;
+        sendBtn.disabled = false;
+        inputEl.placeholder = 'Type or click mic to speak...';
+        inputEl.focus();
+    }
+
+    projBadge.addEventListener('click', () => {
+        projModalSearch.value = '';
+        renderProjectList(allProjects);
+        projModalOverlay.classList.remove('hidden');
+        projModalSearch.focus();
+    });
+
+    // Load projects and show modal on page load
+    loadProjectsForModal();
+    projModalSearch.focus();
 
     // -----------------------------------------------------------------
     // Keyword Chips & Suggestions
@@ -704,7 +823,11 @@
         try {
             const res = await api(`/chat/api/sessions/${currentSession}/send/`, {
                 method: 'POST',
-                body: JSON.stringify({ text }),
+                body: JSON.stringify({
+                    text,
+                    project_id: selectedProject ? selectedProject.id : null,
+                    project_name: selectedProject ? selectedProject.name : '',
+                }),
             });
             typing.remove();
             if (res.assistant_text) {

@@ -33,6 +33,14 @@ from .tools import (
     query_customer_balance as _query_customer_balance,
     query_project_expense_summary as _query_project_expense_summary,
     query_supplier_pending as _query_supplier_pending,
+    query_project_houses as _query_project_houses,
+    query_worker_attendance as _query_worker_attendance,
+    query_project_materials as _query_project_materials,
+    query_customer_enquiries as _query_customer_enquiries,
+    query_property_sell_requests as _query_property_sell_requests,
+    query_user_ledger as _query_user_ledger,
+    query_project_summary as _query_project_summary,
+    query_all_customers_balance as _query_all_customers_balance,
     search_customers as _search_customers,
     search_projects as _search_projects,
     search_suppliers as _search_suppliers,
@@ -343,6 +351,182 @@ def query_supplier_pending(supplier_id: int = 0, project_id: int = 0) -> dict:
     )
 
 
+@tool
+def query_project_houses(project_id: int, status_filter: str = "") -> dict:
+    """List all houses/plots in a project with their status, assigned customer,
+    price, area, and construction completion percentage.
+
+    Use when user asks about houses, plots, ghar, availability, sold status,
+    or which customer lives in which plot.
+
+    Args:
+        project_id: Project ID (from search_projects).
+        status_filter: One of 'available', 'agreement', 'sold', 'hold',
+                       or '' for all.
+    """
+    return _query_project_houses(
+        project_id=project_id,
+        status_filter=status_filter,
+    )
+
+
+@tool
+def query_worker_attendance(
+    project_id: int = 0,
+    worker_id: int = 0,
+    from_date: str = "",
+    to_date: str = "",
+) -> dict:
+    """Fetch worker attendance records showing wages earned, paid, and
+    remaining (baaki). Filter by project and/or worker, with optional
+    date range.
+
+    Use when user asks about worker wages, attendance, baaki, kitna dena
+    hai, or payment history for a specific worker or project.
+
+    Args:
+        project_id: Project ID, or 0 to skip.
+        worker_id: Worker ID (from search_workers), or 0 to skip.
+        from_date: Optional start date YYYY-MM-DD.
+        to_date: Optional end date YYYY-MM-DD.
+    """
+    return _query_worker_attendance(
+        project_id=project_id or None,
+        worker_id=worker_id or None,
+        from_date=from_date,
+        to_date=to_date,
+    )
+
+
+@tool
+def query_project_materials(
+    project_id: int,
+    from_date: str = "",
+    to_date: str = "",
+) -> dict:
+    """List material purchase bills for a project: supplier, bill number,
+    amounts, payment status (pending/partial/paid), and item-level breakdown.
+
+    Use when user asks about material kharcha, bill, cement, bricks, or
+    supplier bills for a project.
+
+    Args:
+        project_id: Project ID.
+        from_date: Optional start date YYYY-MM-DD.
+        to_date: Optional end date YYYY-MM-DD.
+    """
+    return _query_project_materials(
+        project_id=project_id,
+        from_date=from_date,
+        to_date=to_date,
+    )
+
+
+@tool
+def query_customer_enquiries(
+    status_filter: str = "",
+    project_id: int = 0,
+    limit: int = 20,
+) -> dict:
+    """List customer enquiries / leads with contact details, budget,
+    requirements, follow-up date, and current status.
+
+    Use when user asks about leads, enquiries, new customers, interested
+    buyers, follow-up, or converted enquiries.
+
+    Args:
+        status_filter: One of 'new', 'contacted', 'interested',
+                       'not_interested', 'converted', or '' for all.
+        project_id: Optional project filter, or 0 to skip.
+        limit: Max results (1-50, default 20).
+    """
+    return _query_customer_enquiries(
+        status_filter=status_filter,
+        project_id=project_id or None,
+        limit=limit,
+    )
+
+
+@tool
+def query_property_sell_requests(
+    status_filter: str = "",
+    limit: int = 20,
+) -> dict:
+    """List property sell requests — cases where property owners want to
+    sell their property via SVED. Shows owner, contact, property type,
+    area, expected price, and current status.
+
+    Use when user asks about sell requests, property sellers, bechne wale,
+    or property listings received.
+
+    Args:
+        status_filter: One of 'new_lead', 'contacted', 'site_visit',
+                       'deal_closed', 'rejected', or '' for all.
+        limit: Max results (1-50, default 20).
+    """
+    return _query_property_sell_requests(
+        status_filter=status_filter,
+        limit=limit,
+    )
+
+
+@tool
+def query_user_ledger(user_id: int = 0, project_id: int = 0) -> dict:
+    """List UserLedger entries showing creditor↔debtor relationships between
+    staff users along with running balances.
+
+    Use when user asks about staff accounts, kaun kitna dena hai, internal
+    accounts, user ledger, or who owes what to whom among staff.
+
+    Args:
+        user_id: Staff User ID to filter (as creditor or debtor), or 0 for all.
+        project_id: Project ID to filter by, or 0 for all.
+    """
+    return _query_user_ledger(
+        user_id=user_id or None,
+        project_id=project_id or None,
+    )
+
+
+@tool
+def query_all_customers_balance(
+    project_id: int = 0,
+    only_outstanding: bool = False,
+) -> dict:
+    """List ALL customers with their total billed, total paid, and total
+    outstanding (baaki) balance across all their property ledgers.
+
+    Use when user asks for ALL customers' balances together — e.g.
+    'sabhi customers ka balance', 'sab ka baaki batao', 'kitna outstanding
+    hai sab ka', 'all customers balance', 'everyone's dues'.
+    This is different from query_customer_balance which is for one customer.
+
+    Args:
+        project_id: Filter to one project, or 0 for all projects.
+        only_outstanding: Pass True to show only customers with balance > 0
+                          (jinका kuch baaki hai).
+    """
+    return _query_all_customers_balance(
+        project_id=project_id or None,
+        only_outstanding=only_outstanding,
+    )
+
+
+@tool
+def query_project_summary(project_id: int) -> dict:
+    """Return a full overview of a project covering: house counts by status,
+    customer revenue (billed / collected / outstanding), worker wage totals,
+    material purchase totals, supplier dues, and overall project ledger spend.
+
+    Use when user asks for a project overview, summary, poori report,
+    total kharcha, or overall status of a project.
+
+    Args:
+        project_id: Project ID (from search_projects).
+    """
+    return _query_project_summary(project_id=project_id)
+
+
 TOOLS = [
     search_customers,
     search_users,
@@ -358,6 +542,14 @@ TOOLS = [
     query_customer_balance,
     query_project_expense_summary,
     query_supplier_pending,
+    query_project_houses,
+    query_worker_attendance,
+    query_project_materials,
+    query_customer_enquiries,
+    query_property_sell_requests,
+    query_user_ledger,
+    query_project_summary,
+    query_all_customers_balance,
 ]
 
 
@@ -375,14 +567,25 @@ def _system_prompt() -> str:
         "supplier ledger)\n"
         "3. Worker attendance + wage (record a worker's attendance for a "
         "project, with optional wage paid that day)\n"
-        "Plus read-only queries: customer balance, project expense summary, "
-        "supplier pending.\n\n"
+        "Plus read-only queries (no proposal, just answer):\n"
+        "  - ONE customer's balance → query_customer_balance\n"
+        "  - ALL customers' balances at once → query_all_customers_balance\n"
+        "  - Project expense summary → query_project_expense_summary\n"
+        "  - Supplier pending dues → query_supplier_pending\n"
+        "  - Project houses / plots list → query_project_houses\n"
+        "  - Worker attendance & wages → query_worker_attendance\n"
+        "  - Material bills for a project → query_project_materials\n"
+        "  - Customer enquiries / leads → query_customer_enquiries\n"
+        "  - Property sell requests → query_property_sell_requests\n"
+        "  - Staff user ledger (who owes whom) → query_user_ledger\n"
+        "  - Full project overview/summary → query_project_summary\n\n"
         "Decide kind by intent:\n"
         "- Mentions a CUSTOMER name + amount -> kind 1\n"
         "- Mentions a SUPPLIER / shop / vendor + amount -> kind 2\n"
         "- Mentions a WORKER / mistri / labourer + project/site -> kind 3\n"
         "- Asks 'kitna', 'pending', 'kharcha', 'balance', 'outstanding', "
-        "'how much', 'summary' -> read-only query, no proposal\n"
+        "'how much', 'summary', 'list', 'dikhao', 'batao', 'report' "
+        "-> read-only query, no proposal\n"
         "If unclear, ASK the user.\n\n"
         "## General rules\n"
         "- If a search returns multiple matches, ASK to disambiguate. Show "
@@ -443,15 +646,17 @@ def _system_prompt() -> str:
         "5. paid_amount = 0 unless user said cash was actually handed.\n"
         "6. propose_worker_attendance(project_worker_id=<id from step 3>, "
         "...).\n\n"
-        "## Off-topic queries (VERY IMPORTANT)\n"
-        "If the user asks about ANYTHING outside of SVED project management "
-        "(e.g. general knowledge, weather, sports, politics, coding help, "
-        "other businesses, personal advice, or any topic unrelated to "
-        "customers, suppliers, workers, projects, ledgers, payments, or "
-        "attendance) — respond with EXACTLY this message and nothing else:\n"
+        "## Off-topic queries\n"
+        "ONLY refuse if the user asks about something COMPLETELY unrelated to "
+        "SVED — e.g. cricket, weather, general coding help, politics, other "
+        "businesses with no connection to SVED projects.\n"
+        "NEVER refuse queries about: customers, balances, payments, projects, "
+        "workers, suppliers, materials, enquiries, ledgers, houses, plots, "
+        "attendance, wages, expenses, or ANY combination of these even if "
+        "phrased broadly (e.g. 'sabhi', 'sab', 'all', 'poori list', 'report').\n"
+        "When refusing, respond with:\n"
         "\"Sorry, main sirf is project se related queries handle karta hoon. "
-        "Please apna question relevant topic par poochiye.\"\n"
-        "Do NOT use any tool. Do NOT explain. Just output that message.\n\n"
+        "Please apna question relevant topic par poochiye.\"\n\n"
         "## Style\n"
         "- Reply in the user's language (Hindi Romanized if Hindi, English "
         "if English).\n"

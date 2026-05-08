@@ -18,5 +18,12 @@ class ProjectExpenses(models.Model):
 class CustomerReport(models.Model):
     class Meta:
         managed = False
-        verbose_name = 'Customer Report'
-        verbose_name_plural = 'Customer Report'
+        verbose_name = 'Customers Report'
+        verbose_name_plural = 'Customers Report'
+
+
+class CustomerUserLedgerReport(models.Model):
+    class Meta:
+        managed = False
+        verbose_name = 'Customer User Ledger Report'
+        verbose_name_plural = 'Customer User Ledger Report'

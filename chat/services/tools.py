@@ -26,11 +26,18 @@ from django.db.models import Q, Sum
 
 from customers.models.Customers import Customers
 from customers.models.CustomerLedger import CustomerLedger
+from customers.models.CustomerLedgerTransaction import CustomerLedgerTransaction
+from customers.models.CustomerEnquiry import CustomerEnquiry
+from customers.models.PropertySellRequest import PropertySellRequest
 from globals.models.Suppliers import Suppliers
 from projects.models.Projects import Projects
+from projects.models.ProjectHouses import ProjectHouses
 from projects.models.ProjectLedger import ProjectLedger
+from projects.models.ProjectMaterials import ProjectMaterials
 from projects.models.ProjectSupplierLedger import ProjectSupplierLedger
 from projects.models.ProjectWorkers import ProjectWorkers
+from projects.models.ProjectWorkerAttendances import ProjectWorkerAttendances
+from accounts.models.UserLedger import UserLedger
 from workers.models.Workers import Workers
 
 
@@ -650,6 +657,533 @@ def query_supplier_pending(supplier_id: int = None, project_id: int = None) -> d
 
 
 # ---------------------------------------------------------------------------
+# Extended read-only query tools
+# ---------------------------------------------------------------------------
+
+def query_project_houses(project_id: int, status_filter: str = "") -> dict:
+    """List all houses in a project with their status, assigned customer, price,
+    and completion percentage.
+
+    status_filter values: 'available', 'agreement', 'sold', 'hold', or '' for all.
+    """
+    try:
+        project = Projects.objects.get(id=project_id)
+    except Projects.DoesNotExist:
+        return {"error": f"Project {project_id} not found"}
+
+    STATUS_MAP = {
+        "available": 10,
+        "agreement": 20,
+        "sold": 30,
+        "hold": 40,
+    }
+
+    qs = ProjectHouses.objects.filter(project_id=project).select_related("customer_id")
+    if status_filter:
+        code = STATUS_MAP.get(status_filter.lower())
+        if code:
+            qs = qs.filter(status=code)
+
+    qs = qs.order_by("plot_no")
+
+    rows = []
+    counts = {"available": 0, "agreement": 0, "sold": 0, "hold": 0}
+    for h in qs:
+        customer_name = ""
+        if h.customer_id:
+            customer_name = (
+                f"{h.customer_id.first_name or ''} {h.customer_id.last_name or ''}".strip()
+                or h.customer_id.username
+            )
+        status_label = h.get_status_display()
+        for k, v in STATUS_MAP.items():
+            if h.status == v:
+                counts[k] += 1
+        rows.append({
+            "plot_no": h.plot_no,
+            "status": status_label,
+            "customer_name": customer_name or "—",
+            "price": str(h.price or ""),
+            "area_sqyd": str(h.area_sqyd or ""),
+            "complete_percentage": h.complete_percentage,
+        })
+
+    return {
+        "project": str(project),
+        "project_id": project.id,
+        "total_houses": len(rows),
+        "status_counts": counts,
+        "houses": rows,
+    }
+
+
+def query_worker_attendance(
+    project_id: int = None,
+    worker_id: int = None,
+    from_date: str = "",
+    to_date: str = "",
+) -> dict:
+    """Fetch worker attendance records for a project and/or worker with
+    wage totals (total earned, paid, remaining).
+
+    At least one of project_id or worker_id must be provided.
+    from_date / to_date: optional YYYY-MM-DD filters on working_date.
+    """
+    if not project_id and not worker_id:
+        return {"error": "Provide at least project_id or worker_id"}
+
+    qs = (
+        ProjectWorkerAttendances.objects
+        .select_related("project_id", "worker_id")
+    )
+    if project_id:
+        qs = qs.filter(project_id=project_id)
+    if worker_id:
+        qs = qs.filter(worker_id=worker_id)
+    if from_date:
+        try:
+            qs = qs.filter(working_date__gte=date.fromisoformat(from_date))
+        except ValueError:
+            return {"error": f"from_date '{from_date}' is not valid YYYY-MM-DD"}
+    if to_date:
+        try:
+            qs = qs.filter(working_date__lte=date.fromisoformat(to_date))
+        except ValueError:
+            return {"error": f"to_date '{to_date}' is not valid YYYY-MM-DD"}
+
+    qs = qs.order_by("-working_date")[:60]
+
+    rows = []
+    total_earned = Decimal("0")
+    total_paid = Decimal("0")
+    total_remaining = Decimal("0")
+
+    for a in qs:
+        earned = a.total_amount or Decimal("0")
+        paid = a.paid_amount or Decimal("0")
+        remaining = a.remaining_amount or Decimal("0")
+        total_earned += earned
+        total_paid += paid
+        total_remaining += remaining
+        rows.append({
+            "worker": a.worker_id.name if a.worker_id else "—",
+            "project": str(a.project_id) if a.project_id else "—",
+            "working_date": a.working_date.isoformat() if a.working_date else "",
+            "total_amount": str(earned),
+            "paid_amount": str(paid),
+            "remaining_amount": str(remaining),
+        })
+
+    return {
+        "count": len(rows),
+        "total_earned": str(total_earned),
+        "total_paid": str(total_paid),
+        "total_remaining": str(total_remaining),
+        "records": rows,
+    }
+
+
+def query_project_materials(
+    project_id: int,
+    from_date: str = "",
+    to_date: str = "",
+) -> dict:
+    """List material purchase bills for a project with supplier, amount,
+    payment status, and item breakdown.
+
+    from_date / to_date: optional YYYY-MM-DD filters on bill_date.
+    """
+    try:
+        project = Projects.objects.get(id=project_id)
+    except Projects.DoesNotExist:
+        return {"error": f"Project {project_id} not found"}
+
+    qs = (
+        ProjectMaterials.objects
+        .filter(project_id=project)
+        .select_related("supplier_id")
+        .prefetch_related("project_material_id")
+    )
+    if from_date:
+        try:
+            qs = qs.filter(bill_date__gte=date.fromisoformat(from_date))
+        except ValueError:
+            return {"error": f"from_date '{from_date}' is not valid YYYY-MM-DD"}
+    if to_date:
+        try:
+            qs = qs.filter(bill_date__lte=date.fromisoformat(to_date))
+        except ValueError:
+            return {"error": f"to_date '{to_date}' is not valid YYYY-MM-DD"}
+
+    qs = qs.order_by("-bill_date")[:40]
+
+    PAYMENT_STATUS = {10: "Pending", 20: "Partial", 30: "Paid"}
+    rows = []
+    grand_total = Decimal("0")
+    grand_paid = Decimal("0")
+    grand_balance = Decimal("0")
+
+    for m in qs:
+        total = m.total_amount or Decimal("0")
+        paid = m.paid_amount or Decimal("0")
+        bal = m.balance or Decimal("0")
+        grand_total += total
+        grand_paid += paid
+        grand_balance += bal
+
+        items = []
+        for li in m.project_material_id.all():
+            items.append({
+                "material": str(li.material_id),
+                "quantity": str(li.quantity),
+                "unit": li.unit or "",
+                "rate": str(li.rate or ""),
+                "amount": str(li.amount),
+            })
+
+        rows.append({
+            "id": m.id,
+            "supplier": m.supplier_id.shop_name if m.supplier_id else "—",
+            "bill_no": m.bill_no or "",
+            "bill_date": m.bill_date.isoformat() if m.bill_date else "",
+            "total_amount": str(total),
+            "paid_amount": str(paid),
+            "balance": str(bal),
+            "payment_status": PAYMENT_STATUS.get(m.payment_status, "—"),
+            "items": items,
+        })
+
+    return {
+        "project": str(project),
+        "project_id": project.id,
+        "bill_count": len(rows),
+        "grand_total": str(grand_total),
+        "grand_paid": str(grand_paid),
+        "grand_balance": str(grand_balance),
+        "bills": rows,
+    }
+
+
+def query_customer_enquiries(
+    status_filter: str = "",
+    project_id: int = None,
+    limit: int = 20,
+) -> dict:
+    """List customer enquiries / leads.
+
+    status_filter: 'new', 'contacted', 'interested', 'not_interested',
+                   'converted', or '' for all.
+    project_id: optional filter by project.
+    limit: max rows (default 20).
+    """
+    STATUS_MAP = {
+        "new": 10,
+        "contacted": 20,
+        "interested": 30,
+        "not_interested": 40,
+        "converted": 500,
+    }
+    qs = CustomerEnquiry.objects.select_related("project_id", "created_by").order_by("-created_at")
+    if status_filter:
+        code = STATUS_MAP.get(status_filter.lower())
+        if code:
+            qs = qs.filter(status=code)
+    if project_id:
+        qs = qs.filter(project_id=project_id)
+    qs = qs[:max(1, min(limit, 50))]
+
+    rows = []
+    for e in qs:
+        rows.append({
+            "id": e.id,
+            "name": e.name,
+            "phone_no": e.phone_no,
+            "email": e.email or "",
+            "requirement": e.requirement,
+            "property_type": e.property_type,
+            "budget_min": str(e.budget_min or ""),
+            "budget_max": str(e.budget_max or ""),
+            "preferred_location": e.preferred_location or "",
+            "status": e.get_status_display(),
+            "follow_up_date": e.follow_up_date.isoformat() if e.follow_up_date else "",
+            "project": str(e.project_id) if e.project_id else "—",
+            "notes": e.notes or "",
+            "created_at": e.created_at.isoformat() if e.created_at else "",
+        })
+
+    return {"count": len(rows), "enquiries": rows}
+
+
+def query_property_sell_requests(
+    status_filter: str = "",
+    limit: int = 20,
+) -> dict:
+    """List property sell requests from owners wanting to sell via SVED.
+
+    status_filter: 'new_lead', 'contacted', 'site_visit', 'deal_closed',
+                   'rejected', or '' for all.
+    """
+    STATUS_MAP = {
+        "new_lead": 10,
+        "contacted": 20,
+        "site_visit": 30,
+        "deal_closed": 40,
+        "rejected": 50,
+    }
+    qs = PropertySellRequest.objects.order_by("-created_at")
+    if status_filter:
+        code = STATUS_MAP.get(status_filter.lower())
+        if code:
+            qs = qs.filter(status=code)
+    qs = qs[:max(1, min(limit, 50))]
+
+    PROP_TYPE = {10: "Flat", 20: "House", 30: "Plot"}
+    rows = []
+    for r in qs:
+        rows.append({
+            "id": r.id,
+            "owner_name": r.owner_name,
+            "phone_no": r.phone_no,
+            "property_type": PROP_TYPE.get(r.property_type, "—"),
+            "address": r.address or "",
+            "area_sqyd": str(r.area_sqyd or ""),
+            "expected_price": str(r.expected_price or ""),
+            "reason_for_selling": r.reason_for_selling or "",
+            "status": r.get_status_display(),
+            "notes": r.notes or "",
+            "created_at": r.created_at.isoformat() if r.created_at else "",
+        })
+
+    return {"count": len(rows), "requests": rows}
+
+
+def query_user_ledger(
+    user_id: int = None,
+    project_id: int = None,
+) -> dict:
+    """List UserLedger entries showing creditor↔debtor relationships between
+    staff users, with their running balances.
+
+    user_id: filter where the user is creditor or debtor.
+    project_id: filter by project.
+    At least one filter should be provided for focused results.
+    """
+    qs = UserLedger.objects.select_related("creditor", "debtor", "project_id")
+    if user_id:
+        qs = qs.filter(Q(creditor_id=user_id) | Q(debtor_id=user_id))
+    if project_id:
+        qs = qs.filter(project_id=project_id)
+    qs = qs.order_by("-created_at")[:30]
+
+    rows = []
+    total_amount = Decimal("0")
+    total_balance = Decimal("0")
+
+    for ul in qs:
+        creditor_name = (
+            f"{ul.creditor.first_name or ''} {ul.creditor.last_name or ''}".strip()
+            or ul.creditor.username
+        )
+        debtor_name = (
+            f"{ul.debtor.first_name or ''} {ul.debtor.last_name or ''}".strip()
+            or ul.debtor.username
+        )
+        amt = ul.amount or Decimal("0")
+        bal = ul.balance or Decimal("0")
+        total_amount += amt
+        total_balance += bal
+        rows.append({
+            "id": ul.id,
+            "creditor": creditor_name,
+            "creditor_id": ul.creditor_id,
+            "debtor": debtor_name,
+            "debtor_id": ul.debtor_id,
+            "project": str(ul.project_id) if ul.project_id else "—",
+            "project_id": ul.project_id_id,
+            "total_amount": str(amt),
+            "balance": str(bal),
+        })
+
+    return {
+        "count": len(rows),
+        "total_amount": str(total_amount),
+        "total_balance": str(total_balance),
+        "ledgers": rows,
+    }
+
+
+def query_project_summary(project_id: int) -> dict:
+    """Return a comprehensive overview of a project: basic info, house counts
+    by status, customer revenue summary, worker wage totals, material spend,
+    and supplier outstanding dues.
+    """
+    try:
+        project = Projects.objects.get(id=project_id)
+    except Projects.DoesNotExist:
+        return {"error": f"Project {project_id} not found"}
+
+    # Houses
+    house_qs = ProjectHouses.objects.filter(project_id=project)
+    house_totals = {
+        "total": house_qs.count(),
+        "available": house_qs.filter(status=10).count(),
+        "agreement": house_qs.filter(status=20).count(),
+        "sold": house_qs.filter(status=30).count(),
+        "hold": house_qs.filter(status=40).count(),
+    }
+
+    # Customer revenue
+    from customers.models.CustomerLedger import CustomerLedger as CL
+    cl_agg = CL.objects.filter(project_id=project).aggregate(
+        total_billed=Sum("amount"),
+        total_balance=Sum("balance"),
+    )
+    total_billed = cl_agg["total_billed"] or Decimal("0")
+    total_balance = cl_agg["total_balance"] or Decimal("0")
+    customer_revenue = {
+        "total_billed": str(total_billed),
+        "total_collected": str(total_billed - total_balance),
+        "total_outstanding": str(total_balance),
+        "customer_count": CL.objects.filter(project_id=project).values("customer_id").distinct().count(),
+    }
+
+    # Worker wages
+    worker_agg = ProjectWorkerAttendances.objects.filter(project_id=project).aggregate(
+        total_earned=Sum("total_amount"),
+        total_paid=Sum("paid_amount"),
+        total_remaining=Sum("remaining_amount"),
+    )
+    worker_wages = {
+        "total_earned": str(worker_agg["total_earned"] or Decimal("0")),
+        "total_paid": str(worker_agg["total_paid"] or Decimal("0")),
+        "total_remaining": str(worker_agg["total_remaining"] or Decimal("0")),
+        "attendance_count": ProjectWorkerAttendances.objects.filter(project_id=project).count(),
+    }
+
+    # Material spend
+    mat_agg = ProjectMaterials.objects.filter(project_id=project).aggregate(
+        total=Sum("total_amount"),
+        paid=Sum("paid_amount"),
+        balance=Sum("balance"),
+    )
+    materials = {
+        "total_bills": ProjectMaterials.objects.filter(project_id=project).count(),
+        "total_amount": str(mat_agg["total"] or Decimal("0")),
+        "paid_amount": str(mat_agg["paid"] or Decimal("0")),
+        "balance": str(mat_agg["balance"] or Decimal("0")),
+    }
+
+    # Supplier dues
+    sup_agg = ProjectSupplierLedger.objects.filter(project=project).aggregate(
+        total=Sum("total_amount"),
+        paid=Sum("paid_amount"),
+        pending=Sum("balance"),
+    )
+    supplier_dues = {
+        "total_billed": str(sup_agg["total"] or Decimal("0")),
+        "total_paid": str(sup_agg["paid"] or Decimal("0")),
+        "total_pending": str(sup_agg["pending"] or Decimal("0")),
+    }
+
+    # ProjectLedger grand total
+    pl_agg = ProjectLedger.objects.filter(project=project).aggregate(total=Sum("amount"))
+    project_ledger_total = str(pl_agg["total"] or Decimal("0"))
+
+    return {
+        "project": str(project),
+        "project_id": project.id,
+        "status": project.get_status_display(),
+        "project_type": project.get_project_type_display(),
+        "area_sqyd": str(project.area_sqyd or ""),
+        "houses": house_totals,
+        "customer_revenue": customer_revenue,
+        "worker_wages": worker_wages,
+        "materials": materials,
+        "supplier_dues": supplier_dues,
+        "project_ledger_total_expense": project_ledger_total,
+    }
+
+
+def query_all_customers_balance(
+    project_id: int = None,
+    only_outstanding: bool = False,
+) -> dict:
+    """List ALL customers with their total billed, paid, and outstanding
+    balance across their property ledgers.
+
+    Use when user asks for all customers' balances, sabhi customers ka
+    balance, everyone's outstanding, kitna baaki hai sab ka, etc.
+
+    project_id: optional — restrict to customers in one project.
+    only_outstanding: if True, return only customers who still have a
+                      balance > 0 (baaki hai).
+    """
+    qs = (
+        CustomerLedger.objects
+        .select_related("customer_id", "project_id", "project_house_id")
+        .order_by("customer_id__first_name", "customer_id__last_name")
+    )
+    if project_id:
+        qs = qs.filter(project_id=project_id)
+
+    customer_map: dict = {}
+    for cl in qs:
+        cid = cl.customer_id_id
+        if cid not in customer_map:
+            c = cl.customer_id
+            customer_map[cid] = {
+                "customer_id": cid,
+                "name": (
+                    f"{c.first_name or ''} {c.last_name or ''}".strip()
+                    or c.username
+                ),
+                "phone": c.phone_no or "",
+                "total_billed": Decimal("0"),
+                "total_outstanding": Decimal("0"),
+                "ledgers": [],
+            }
+        entry = customer_map[cid]
+        amount = cl.amount or Decimal("0")
+        balance = cl.balance or Decimal("0")
+        entry["total_billed"] += amount
+        entry["total_outstanding"] += balance
+        entry["ledgers"].append({
+            "ledger_id": cl.id,
+            "project": str(cl.project_id),
+            "house": str(cl.project_house_id),
+            "billed": str(amount),
+            "outstanding": str(balance),
+        })
+
+    rows = []
+    grand_billed = Decimal("0")
+    grand_outstanding = Decimal("0")
+    for entry in customer_map.values():
+        paid = entry["total_billed"] - entry["total_outstanding"]
+        if only_outstanding and entry["total_outstanding"] <= 0:
+            continue
+        grand_billed += entry["total_billed"]
+        grand_outstanding += entry["total_outstanding"]
+        rows.append({
+            "customer_id": entry["customer_id"],
+            "name": entry["name"],
+            "phone": entry["phone"],
+            "total_billed": str(entry["total_billed"]),
+            "total_paid": str(paid),
+            "total_outstanding": str(entry["total_outstanding"]),
+            "ledgers": entry["ledgers"],
+        })
+
+    return {
+        "count": len(rows),
+        "grand_billed": str(grand_billed),
+        "grand_paid": str(grand_billed - grand_outstanding),
+        "grand_outstanding": str(grand_outstanding),
+        "customers": rows,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Dispatch (kept for callers that still need a registry)
 # ---------------------------------------------------------------------------
 TOOL_DISPATCH = {
@@ -667,6 +1201,14 @@ TOOL_DISPATCH = {
     "query_customer_balance": query_customer_balance,
     "query_project_expense_summary": query_project_expense_summary,
     "query_supplier_pending": query_supplier_pending,
+    "query_project_houses": query_project_houses,
+    "query_worker_attendance": query_worker_attendance,
+    "query_project_materials": query_project_materials,
+    "query_customer_enquiries": query_customer_enquiries,
+    "query_property_sell_requests": query_property_sell_requests,
+    "query_user_ledger": query_user_ledger,
+    "query_project_summary": query_project_summary,
+    "query_all_customers_balance": query_all_customers_balance,
 }
 
 PROPOSAL_TOOLS = {

@@ -13,7 +13,7 @@ from customers.models.CustomerLedgerTransaction import CustomerLedgerTransaction
 from projects.models.Projects import Projects
 from projects.models.ProjectLedger import ProjectLedger
 from accounts.utils import format_indian_currency
-from .forms import UserCustomerLedgerFilterForm, ProjectExpenseFilterForm, CustomerReportFilterForm
+from .forms import UserCustomerLedgerFilterForm, ProjectExpenseFilterForm, CustomerReportFilterForm, CustomerUserLedgerFilterForm
 
 try:
     import weasyprint
@@ -323,7 +323,123 @@ def project_expenses_report(request):
     return render(request, 'reports/project_expenses_report.html', context)
 
 
-# ── Customer Report ──────────────────────────────────────────────────────────
+# ── Customer User Ledger Report ───────────────────────────────────────────────
+
+def _build_customer_user_ledger_data(customer_ledger):
+    # Per-user payment totals for this customer's ledger
+    txn_qs = (
+        CustomerLedgerTransaction.objects
+        .filter(customer_ledger=customer_ledger, payment_type='credited')
+        .values(
+            'paid_to__id',
+            'paid_to__first_name',
+            'paid_to__last_name',
+            'paid_to__username',
+        )
+        .annotate(total_paid=Sum('amount'))
+        .order_by('paid_to__first_name', 'paid_to__last_name')
+    )
+
+    user_rows = []
+    chart_labels = []
+    chart_data = []
+    for row in txn_qs:
+        first = row['paid_to__first_name'] or ''
+        last = row['paid_to__last_name'] or ''
+        username = row['paid_to__username'] or ''
+        name = f"{first} {last}".strip() or username
+        amount = float(row['total_paid'] or 0)
+        user_rows.append({
+            'user_name': name,
+            'total_paid': format_indian_currency(amount),
+            'total_paid_raw': amount,
+        })
+        chart_labels.append(name)
+        chart_data.append(amount)
+
+    total_amount = float(customer_ledger.amount or 0)
+    total_balance = float(customer_ledger.balance or 0)
+    total_paid = max(total_amount - total_balance, 0)
+
+    return {
+        'user_rows': user_rows,
+        'total_amount': format_indian_currency(total_amount),
+        'total_paid': format_indian_currency(total_paid),
+        'total_balance': format_indian_currency(total_balance),
+        'total_amount_raw': total_amount,
+        'total_paid_raw': total_paid,
+        'total_balance_raw': total_balance,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+        'donut_labels': json.dumps(['Paid', 'Balance']),
+        'donut_data': json.dumps([total_paid, total_balance]),
+    }
+
+
+@staff_member_required
+def ajax_customers_for_project(request):
+    project_id = request.GET.get('project_id')
+    if not project_id:
+        return JsonResponse({'customers': []})
+    try:
+        project_id = int(project_id)
+    except (ValueError, TypeError):
+        return JsonResponse({'customers': []})
+
+    rows = (
+        CustomerLedger.objects
+        .filter(project_id_id=project_id)
+        .select_related('customer_id')
+        .values(
+            'customer_id__id',
+            'customer_id__first_name',
+            'customer_id__last_name',
+            'customer_id__username',
+        )
+        .distinct()
+        .order_by('customer_id__first_name', 'customer_id__last_name')
+    )
+    customers = []
+    for row in rows:
+        first = row['customer_id__first_name'] or ''
+        last = row['customer_id__last_name'] or ''
+        username = row['customer_id__username'] or ''
+        name = f"{first} {last}".strip() or username
+        customers.append({'id': row['customer_id__id'], 'name': name})
+    return JsonResponse({'customers': customers})
+
+
+@staff_member_required
+def customer_user_ledger_report(request):
+    form = CustomerUserLedgerFilterForm(request.GET or None)
+    context = {
+        **admin.site.each_context(request),
+        'form': form,
+        'title': 'Customer User Ledger Report',
+    }
+
+    if request.GET.get('project') and request.GET.get('customer') and form.is_valid():
+        project_obj = form.cleaned_data['project']
+        customer_obj = form.cleaned_data['customer']
+        customer_ledger = (
+            CustomerLedger.objects
+            .filter(project_id=project_obj, customer_id=customer_obj)
+            .first()
+        )
+        if customer_ledger:
+            context.update({
+                'report': _build_customer_user_ledger_data(customer_ledger),
+                'selected_project': project_obj,
+                'selected_customer': customer_obj,
+                'customer_ledger': customer_ledger,
+            })
+        else:
+            context['no_ledger'] = True
+
+    return render(request, 'reports/customer_user_ledger_report.html', context)
+
+
+# ── Customers Report ──────────────────────────────────────────────────────────
 
 def _build_customer_report_data(project_obj):
     from customers.models.CustomerLedger import CustomerLedger as CL
@@ -393,7 +509,7 @@ def customer_report(request):
     context = {
         **admin.site.each_context(request),
         'form': form,
-        'title': 'Customer Report',
+        'title': 'Customers Report',
     }
     if request.GET.get('project') and form.is_valid():
         project_obj = form.cleaned_data['project']
@@ -402,6 +518,57 @@ def customer_report(request):
             'selected_project': project_obj,
         })
     return render(request, 'reports/customer_report.html', context)
+
+
+@staff_member_required
+def download_customer_user_ledger_pdf(request):
+    if weasyprint is None:
+        return HttpResponse("PDF generation is unavailable on this server.", status=503)
+
+    project_id = request.GET.get('project')
+    customer_id = request.GET.get('customer')
+    if not project_id or not customer_id:
+        return HttpResponse("Project and Customer are required.", status=400)
+
+    try:
+        project_obj = Projects.objects.get(pk=project_id)
+        from customers.models.Customers import Customers
+        customer_obj = Customers.objects.get(pk=customer_id)
+    except Exception:
+        return HttpResponse("Invalid project or customer.", status=404)
+
+    customer_ledger = (
+        CustomerLedger.objects
+        .filter(project_id=project_obj, customer_id=customer_obj)
+        .first()
+    )
+    if not customer_ledger:
+        return HttpResponse("No ledger found for this customer in the selected project.", status=404)
+
+    report = _build_customer_user_ledger_data(customer_ledger)
+    from django.template.loader import render_to_string
+    html_string = render_to_string('reports/customer_user_ledger_pdf.html', {
+        'report': report,
+        'selected_project': project_obj,
+        'selected_customer': customer_obj,
+        'customer_ledger': customer_ledger,
+    })
+
+    try:
+        pdf_bytes = weasyprint.HTML(
+            string=html_string,
+            base_url=request.build_absolute_uri('/')
+        ).write_pdf()
+    except OSError as e:
+        return HttpResponse(f"PDF generation failed: {e}", status=500)
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    first = customer_obj.first_name or ''
+    last = customer_obj.last_name or ''
+    cname = f"{first}_{last}".strip('_') or customer_obj.username
+    filename = f"customer_user_ledger_{cname}_{project_obj.name}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 @staff_member_required
