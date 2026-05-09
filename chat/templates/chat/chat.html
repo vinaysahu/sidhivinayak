@@ -310,6 +310,7 @@
     let currentSession = null;
     let recognition = null;
     let isRecording = false;
+    let committedText = '';
 
     const sessionListEl = document.getElementById('sessionList');
     const messagesEl = document.getElementById('messages');
@@ -1173,7 +1174,7 @@
         }
     }
 
-    function startRecording(preservedText) {
+    function startRecording() {
         if (!SRClass) return;
 
         recognition = new SRClass();
@@ -1181,8 +1182,9 @@
         recognition.interimResults = true;
         recognition.lang = langSelect.value;
 
-        // If restarting after a pause, resume from already-typed text
-        let finalTranscript = preservedText ? preservedText.trimEnd() + ' ' : '';
+        // Each session accumulates only NEW words; committedText holds
+        // everything confirmed from previous sessions.
+        let finalTranscript = '';
 
         recognition.onresult = (event) => {
             let interim = '';
@@ -1194,7 +1196,10 @@
                     interim += transcript;
                 }
             }
-            inputEl.value = (finalTranscript + interim).trim();
+            const newPart = (finalTranscript + interim).trim();
+            inputEl.value = committedText
+                ? committedText + ' ' + newPart
+                : newPart;
         };
 
         recognition.onerror = (e) => {
@@ -1211,8 +1216,15 @@
 
         recognition.onend = () => {
             if (isRecording) {
-                // Create a fresh instance to avoid browsers replaying old results
-                startRecording(inputEl.value);
+                // Commit finalized text before restarting so the new session
+                // starts fresh — prevents old results replaying as duplicates.
+                if (finalTranscript.trim()) {
+                    committedText = committedText
+                        ? committedText + ' ' + finalTranscript.trim()
+                        : finalTranscript.trim();
+                    finalTranscript = '';
+                }
+                startRecording();
             }
         };
 
@@ -1233,6 +1245,7 @@
             try { recognition.stop(); } catch (_) {}
             recognition = null;
         }
+        committedText = '';
         micBtn.classList.remove('recording');
         micBtn.textContent = '🎤';
 
