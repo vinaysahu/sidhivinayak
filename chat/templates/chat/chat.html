@@ -1173,16 +1173,16 @@
         }
     }
 
-    function startRecording() {
+    function startRecording(preservedText) {
         if (!SRClass) return;
 
-        // Fresh instance each time so finalTranscript resets and no stale state
         recognition = new SRClass();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = langSelect.value;
 
-        let finalTranscript = '';
+        // If restarting after a pause, resume from already-typed text
+        let finalTranscript = preservedText ? preservedText.trimEnd() + ' ' : '';
 
         recognition.onresult = (event) => {
             let interim = '';
@@ -1200,18 +1200,19 @@
         recognition.onerror = (e) => {
             if (e.error === 'not-allowed') {
                 alert('Microphone access denied.\nBrowser settings mein microphone allow karo aur page reload karo.');
+                stopRecording();
             } else if (e.error === 'no-speech') {
-                // silence — ignore, auto-restart will handle it
+                // silence — onend will handle restart, do nothing here
             } else {
                 console.error('Speech recognition error:', e.error);
+                stopRecording();
             }
-            stopRecording();
         };
 
         recognition.onend = () => {
             if (isRecording) {
-                // auto-restart after silence (some browsers stop after a pause)
-                try { recognition.start(); } catch (_) {}
+                // Create a fresh instance to avoid browsers replaying old results
+                startRecording(inputEl.value);
             }
         };
 
