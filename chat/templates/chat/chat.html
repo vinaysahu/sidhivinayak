@@ -1175,67 +1175,63 @@
     }
 
     function startRecording() {
-        if (!SRClass) return;
+        if (!SRClass || !isRecording) return;
 
-        recognition = new SRClass();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = langSelect.value;
+        const instance = new SRClass();
+        instance.continuous = false;   // one utterance at a time — no replay duplicates
+        instance.interimResults = true;
+        instance.lang = langSelect.value;
+        recognition = instance;
 
-        // Each session accumulates only NEW words; committedText holds
-        // everything confirmed from previous sessions.
-        let finalTranscript = '';
-
-        recognition.onresult = (event) => {
+        instance.onresult = (event) => {
+            let sessionFinal = '';
             let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
+            for (let i = 0; i < event.results.length; i++) {
+                const t = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    finalTranscript += transcript + ' ';
+                    sessionFinal += t;
                 } else {
-                    interim += transcript;
+                    interim += t;
                 }
             }
-            const newPart = (finalTranscript + interim).trim();
+            const displaying = (sessionFinal + interim).trim();
             inputEl.value = committedText
-                ? committedText + ' ' + newPart
-                : newPart;
+                ? committedText + ' ' + displaying
+                : displaying;
         };
 
-        recognition.onerror = (e) => {
+        instance.onerror = (e) => {
             if (e.error === 'not-allowed') {
                 alert('Microphone access denied.\nBrowser settings mein microphone allow karo aur page reload karo.');
                 stopRecording();
             } else if (e.error === 'no-speech') {
-                // silence — onend will handle restart, do nothing here
+                // silence — onend restarts automatically
             } else {
                 console.error('Speech recognition error:', e.error);
                 stopRecording();
             }
         };
 
-        recognition.onend = () => {
+        instance.onend = () => {
+            recognition = null;
+            // Commit whatever is in the input box as the new base
+            const current = inputEl.value.trim();
+            if (current) committedText = current;
             if (isRecording) {
-                // Commit finalized text before restarting so the new session
-                // starts fresh — prevents old results replaying as duplicates.
-                if (finalTranscript.trim()) {
-                    committedText = committedText
-                        ? committedText + ' ' + finalTranscript.trim()
-                        : finalTranscript.trim();
-                    finalTranscript = '';
-                }
+                // Restart with a fresh instance — continuous=false ensures
+                // Chrome does NOT replay previous words in the new session.
                 startRecording();
             }
         };
 
         try {
-            recognition.start();
-            isRecording = true;
-            micBtn.classList.add('recording');
-            micBtn.textContent = '⏹';
+            instance.start();
         } catch (e) {
             console.error('Could not start speech recognition:', e);
             recognition = null;
+            isRecording = false;
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '🎤';
         }
     }
 
@@ -1276,8 +1272,15 @@
     }
 
     micBtn.addEventListener('click', () => {
-        if (isRecording) stopRecording();
-        else startRecording();
+        if (isRecording) {
+            stopRecording();
+        } else {
+            committedText = '';
+            isRecording = true;
+            micBtn.classList.add('recording');
+            micBtn.textContent = '⏹';
+            startRecording();
+        }
     });
 
     sendBtn.addEventListener('click', sendMessage);
