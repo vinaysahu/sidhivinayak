@@ -9,6 +9,13 @@ class UserLedgerTransaction(models.Model):
         ('debited', 'Debited'),
     )
 
+    MODE_CHOICES = (
+        ('cash', 'Cash'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online'),
+        ('other', 'Other'),
+    )
+
     user_ledger = models.ForeignKey(
         UserLedger,
         on_delete=models.CASCADE,
@@ -20,6 +27,7 @@ class UserLedgerTransaction(models.Model):
     )
     paid_on = models.DateField(blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES, blank=True, null=True)
     detail = models.TextField(blank=True, null=True)
     source_transaction = models.ForeignKey(
         'customers.CustomerLedgerTransaction',

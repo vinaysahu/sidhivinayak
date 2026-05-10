@@ -64,6 +64,7 @@ def auto_create_user_ledger_transaction(sender, instance, created, **kwargs):
                 amount=instance.amount,
                 paid_on=instance.paid_on,
                 payment_type=instance.payment_type,
+                mode=instance.mode,
                 detail=full_detail,
                 source_transaction=instance
             )

@@ -40,7 +40,7 @@ class UserLedgerTransactionsInline(admin.TabularInline):
         'balance_display', 'balance_words'
     ]
 
-    fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail']
+    fields = ['paid_on', 'payment_type', 'mode', 'amount', 'amount_display', 'amount_words', 'detail']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -107,8 +107,8 @@ class UserLedgerTransactionViewInline(admin.TabularInline):
     verbose_name_plural = "Transactions View"
     template = 'admin/accounts/user_ledger/tabular_paginated_view.html'
 
-    readonly_fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail']
-    fields = ['paid_on', 'payment_type', 'amount', 'amount_display', 'amount_words', 'detail']
+    readonly_fields = ['paid_on', 'payment_type', 'mode', 'amount', 'amount_display', 'amount_words', 'detail']
+    fields = ['paid_on', 'payment_type', 'mode', 'amount', 'amount_display', 'amount_words', 'detail']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -346,7 +346,7 @@ class UserLedgerAdmin(admin.ModelAdmin):
 
         # ── Row 10: Transaction table header ──
         txn_header_row = 10
-        txn_cols = ['#', 'Paid On', 'Payment Type', 'Detail', 'Amount (₹)']
+        txn_cols = ['#', 'Paid On', 'Payment Type', 'Mode', 'Detail', 'Amount (₹)']
         for col_idx, col_name in enumerate(txn_cols, start=1):
             cell = ws.cell(row=txn_header_row, column=col_idx, value=col_name)
             cell.font      = header_font
@@ -362,6 +362,7 @@ class UserLedgerAdmin(admin.ModelAdmin):
                 row_idx,
                 txn.paid_on.strftime('%d-%m-%Y') if txn.paid_on else '—',
                 txn.payment_type or '—',
+                txn.get_mode_display() if txn.mode else '—',
                 txn.detail or '—',
                 float(txn.amount) if txn.amount else 0,
             ]
@@ -369,10 +370,10 @@ class UserLedgerAdmin(admin.ModelAdmin):
                 cell = ws.cell(row=row_num, column=col_idx, value=value)
                 cell.fill      = row_fill
                 cell.border    = thin_border
-                cell.alignment = center_align if col_idx in (1, 2, 3, 5) else left_align
+                cell.alignment = center_align if col_idx in (1, 2, 3, 4, 6) else left_align
 
         # ── Column widths ──
-        col_widths = [6, 14, 16, 40, 18]
+        col_widths = [6, 14, 16, 12, 40, 18]
         for i, w in enumerate(col_widths, start=1):
             ws.column_dimensions[get_column_letter(i)].width = w
 
@@ -410,12 +411,13 @@ class UserLedgerAdmin(admin.ModelAdmin):
         writer.writerow([])
 
         # Transactions
-        writer.writerow(['#', 'Paid On', 'Payment Type', 'Detail', 'Amount'])
+        writer.writerow(['#', 'Paid On', 'Payment Type', 'Mode', 'Detail', 'Amount'])
         for i, txn in enumerate(transactions, start=1):
             writer.writerow([
                 i,
                 txn.paid_on.strftime('%d-%m-%Y') if txn.paid_on else '—',
                 txn.payment_type or '—',
+                txn.get_mode_display() if txn.mode else '—',
                 txn.detail or '—',
                 float(txn.amount) if txn.amount else 0,
             ])

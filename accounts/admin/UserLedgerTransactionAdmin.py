@@ -12,7 +12,7 @@ from django.utils.html import format_html
 
 class UserLedgerTransactionAdmin(admin.ModelAdmin):
     form = UserLedgerTransactionForm
-    list_display = ['user_ledger', 'paid_on', 'payment_type', 'formatted_amount', 'detail']
+    list_display = ['user_ledger', 'paid_on', 'payment_type', 'mode', 'formatted_amount', 'detail']
     exclude = ('created_at', 'updated_at')
     
     readonly_fields = [
@@ -24,7 +24,7 @@ class UserLedgerTransactionAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
-                'user_ledger', 'payment_type', 'paid_on', 'amount', 'detail'
+                'user_ledger', 'payment_type', 'mode', 'paid_on', 'amount', 'detail'
             )
         }),
         ('Summary (Currency Display)', {

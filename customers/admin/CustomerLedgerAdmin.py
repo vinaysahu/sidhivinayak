@@ -33,7 +33,7 @@ class CustomerLedgerTransactionsInline(admin.TabularInline):
     exclude = ('created_at', 'updated_at') 
     verbose_name = "Customer Ledger Transaction"
     verbose_name_plural = "Customer Ledger Transactions"
-    fields = ['paid_on', 'payment_type', 'amount', 'paid_to', 'detail'] 
+    fields = ['paid_on', 'payment_type', 'mode', 'amount', 'paid_to', 'detail']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -60,6 +60,7 @@ class CustomerLedgerRequestInline(admin.TabularInline):
     fields = [
         'paid_on',
         'payment_type',
+        'mode',
         'amount',
         'paid_to',
         'detail',
@@ -69,6 +70,7 @@ class CustomerLedgerRequestInline(admin.TabularInline):
     readonly_fields = [
         'paid_on',
         'payment_type',
+        'mode',
         'amount',
         'paid_to',
         'detail',
@@ -226,6 +228,7 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
                 customerLedgerEntry = CustomerLedgerTransaction.objects.create(
                     customer_ledger=customer_request.customer_ledger,
                     payment_type=customer_request.payment_type,
+                    mode=customer_request.mode,
                     paid_on=customer_request.paid_on,
                     amount=customer_request.amount,
                     paid_to=customer_request.paid_to,

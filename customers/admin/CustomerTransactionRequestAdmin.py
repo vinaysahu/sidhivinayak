@@ -11,8 +11,16 @@ from common.utils.format_currency import format_indian_currency
       
 class CustomerTransactionRequestAdmin(admin.ModelAdmin):
 
-    list_display = ['paid_on', 'paid_to', 'payment_type','formatted_amount','detail', 'status' ] # grid mae kaisa view
+    list_display = ['paid_on', 'paid_to', 'payment_type', 'mode', 'formatted_amount', 'detail', 'status']
     exclude = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': (
+                'customer_ledger', 'payment_type', 'mode', 'paid_on', 'amount', 'paid_to', 'detail', 'status'
+            )
+        }),
+    )
 
     list_filter = [customDropdownFilterForAnotherTable("Customers", "customers", "first_name", Customers, ["customer_ledger__customer_id"]  )]
     

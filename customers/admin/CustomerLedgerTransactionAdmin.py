@@ -28,8 +28,16 @@ class CustomerLedgerTransactionAdmin(admin.ModelAdmin):
     list_select_related = True
     form = CustomerLedgerTransactionForm
 
-    list_display = ['customer_ledger', 'paid_on', 'paid_to', 'payment_type', 'formatted_amount', 'detail']
+    list_display = ['customer_ledger', 'paid_on', 'paid_to', 'payment_type', 'mode', 'formatted_amount', 'detail']
     exclude = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': (
+                'customer_ledger', 'payment_type', 'mode', 'paid_on', 'amount', 'paid_to', 'detail'
+            )
+        }),
+    )
 
     # list_filter = [customDropdownFilterForAnotherTable("Customer Ledger", "Customer Ledger", "customer_id", CustomerLedger, ["customer_ledger__customer_id"]  ), 'paid_to']
     list_filter = [CustomerFilter, 'paid_to']

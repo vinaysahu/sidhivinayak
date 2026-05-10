@@ -9,6 +9,13 @@ class CustomerRequestTransaction(models.Model):
         ('debited', 'Debited'),
     )
 
+    MODE_CHOICES = (
+        ('cash', 'Cash'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online'),
+        ('other', 'Other'),
+    )
+
     STATUS_NEW = 10
     STATUS_ACCEPTED = 20
     STATUS_DELETED = 30
@@ -31,6 +38,7 @@ class CustomerRequestTransaction(models.Model):
     )
     
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES, blank=True, null=True)
     detail = models.TextField(blank=True, null=True)
     paid_on = models.DateField(blank=True, null=True)
     paid_to = models.ForeignKey(
