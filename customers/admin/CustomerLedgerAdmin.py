@@ -6,8 +6,7 @@ from customers.models.CustomerLedger import CustomerLedger
 from customers.models.CustomerLedgerTransaction import CustomerLedgerTransaction
 from customers.models.CustomerRequestTransaction import CustomerRequestTransaction
 from common.filters.adminModelFilter import TableForiegnKeyListFilter
-from django.db.models import Q
-from django.db.models import F
+from django.db.models import Q, F, Sum
 from num2words import num2words
 from common.utils.format_currency import format_indian_currency
 from django.utils.html import format_html
@@ -156,9 +155,10 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
         pdf_url   = reverse('admin:download_customer_ledger',       args=[obj.pk])
         excel_url = reverse('admin:download_customer_ledger_excel', args=[obj.pk])
         csv_url   = reverse('admin:download_customer_ledger_csv',   args=[obj.pk])
+        recalc_url = reverse('admin:recalculate_customer_balance',  args=[obj.pk])
         uid = f"cldrop_{obj.pk}"
         return format_html(
-            '<div style="display:inline-block;">'
+            '<div style="display:inline-block;vertical-align:middle;">'
             '<button type="button" data-sved-toggle="1"'
             ' onclick="svedToggleDrop(this,\'{uid}\')"'
             ' style="background:#0d6efd;color:#fff;padding:5px 12px;border:none;'
@@ -174,8 +174,14 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
             ' style="display:block;padding:6px 14px;color:#212529;text-decoration:none;font-size:12px;">&#128202; Excel</a>'
             '<a href="{csv}" target="_blank"'
             ' style="display:block;padding:6px 14px;color:#212529;text-decoration:none;font-size:12px;">&#128203; CSV</a>'
-            '</div></div>',
-            uid=uid, pdf=pdf_url, excel=excel_url, csv=csv_url,
+            '</div></div>'
+            '&nbsp;<button type="button"'
+            ' onclick="if(confirm(\'Is customer ka balance transactions se recalculate karke update karna chahte ho?\'))'
+            '{{window.location=\'{recalc}\'}}"'
+            ' style="background:#198754;color:#fff;padding:5px 10px;border:none;'
+            'border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap;vertical-align:middle;">'
+            '&#x21BB; Recalculate</button>',
+            uid=uid, pdf=pdf_url, excel=excel_url, csv=csv_url, recalc=recalc_url,
         )
     ledger_actions.short_description = "Actions"
     ledger_actions.allow_tags = True
@@ -200,6 +206,11 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
                 'reject-customer-request/<int:request_id>/',
                 self.admin_site.admin_view(self.reject_customer_request),
                 name='reject_customer_request'
+            ),
+            path(
+                'customer-ledger/<int:ledger_id>/recalculate/',
+                self.admin_site.admin_view(self.recalculate_balance),
+                name='recalculate_customer_balance',
             ),
             path(
                 'customer-ledger/<int:ledger_id>/pdf/',
@@ -250,6 +261,28 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
         customer_request.save()
         self.message_user(request, "Customer request rejected successfully.", level='success')
         return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+    def recalculate_balance(self, request, ledger_id):
+        try:
+            ledger = CustomerLedger.objects.get(pk=ledger_id)
+            credited = CustomerLedgerTransaction.objects.filter(
+                customer_ledger=ledger, payment_type='credited'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            debited = CustomerLedgerTransaction.objects.filter(
+                customer_ledger=ledger, payment_type='debited'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            ledger.balance = ledger.amount - credited + debited
+            ledger.save(update_fields=['balance'])
+            self.message_user(
+                request,
+                f"Balance recalculate ho gaya: {format_indian_currency(ledger.balance)}",
+                level='success'
+            )
+        except CustomerLedger.DoesNotExist:
+            self.message_user(request, "Ledger nahi mila.", level='error')
+        except Exception as e:
+            self.message_user(request, f"Error: {str(e)}", level='error')
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '../'))
 
     # ─── download helpers & views ──────────────────────────────────────────
 
