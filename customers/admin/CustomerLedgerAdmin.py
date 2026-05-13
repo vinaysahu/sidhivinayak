@@ -29,10 +29,27 @@ except Exception:
 class CustomerLedgerTransactionsInline(admin.TabularInline):
     model = CustomerLedgerTransaction
     extra = 2
-    exclude = ('created_at', 'updated_at') 
+    exclude = ('created_at', 'updated_at')
     verbose_name = "Customer Ledger Transaction"
     verbose_name_plural = "Customer Ledger Transactions"
-    fields = ['paid_on', 'payment_type', 'mode', 'amount', 'paid_to', 'detail']
+    fields = ['edit_link', 'paid_on', 'payment_type', 'mode', 'formatted_amount', 'paid_to', 'detail']
+    readonly_fields = ['formatted_amount', 'edit_link']
+
+    def formatted_amount(self, obj):
+        if obj.pk and obj.amount is not None:
+            return format_indian_currency(obj.amount)
+        return "—"
+    formatted_amount.short_description = "Amount (₹)"
+
+    def edit_link(self, obj):
+        if obj.pk:
+            url = reverse('admin:customers_customerledgertransaction_change', args=[obj.pk])
+            return format_html(
+                '<a href="{}" title="Edit" style="font-size:16px;text-decoration:none;">&#9998;</a>',
+                url
+            )
+        return "—"
+    edit_link.short_description = ""
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

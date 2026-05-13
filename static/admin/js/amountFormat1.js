@@ -7,14 +7,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (isNaN(number)) return '₹ 0.00';
 
-        // Indian numbering system logic
         let parts = number.toFixed(2).split('.');
         let integerPart = parts[0];
         let decimalPart = parts[1];
-        
+
         let lastThree = integerPart.slice(-3);
         let otherParts = integerPart.slice(0, -3);
-        
+
         if (otherParts !== '' && otherParts !== '-') {
             let prefix = "";
             if (otherParts.startsWith("-")) {
@@ -58,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const cleanValue = value.replace(/,/g, '');
         const formatted = formatNumber(cleanValue);
         const words = numberToWords(cleanValue) + " Rupees Only";
-        
+
         document.querySelectorAll('.live-amount').forEach(el => {
             el.innerText = formatted;
         });
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const input = document.getElementById(fieldId);
         if (!input) return;
 
-        // 👇 formatted preview div (for the field itself)
         let preview = input.parentNode.querySelector('.amt-preview');
         if (!preview) {
             preview = document.createElement('div');
@@ -82,7 +80,6 @@ document.addEventListener('DOMContentLoaded', function () {
             input.parentNode.appendChild(preview);
         }
 
-        // 👇 words preview div
         let wordsDiv = input.parentNode.querySelector('.words-preview');
         if (!wordsDiv) {
             wordsDiv = document.createElement('div');
@@ -95,11 +92,10 @@ document.addEventListener('DOMContentLoaded', function () {
         function updatePreview() {
             let value = input.value;
             let clean = value.replace(/,/g, '');
-            
+
             preview.innerText = formatNumber(clean);
             wordsDiv.innerText = numberToWords(clean) + " Rupees Only";
-            
-            // Also update the UPAR/NICHE summary blocks if we are on id_amount
+
             if (fieldId === 'id_amount') {
                 updateLiveSummary(clean);
             }
@@ -113,24 +109,37 @@ document.addEventListener('DOMContentLoaded', function () {
     attachPreview('id_amount');
     attachPreview('id_balance');
 
-    // Handle existing readonly elements (like in list view or other admin pages)
+    // Format readonly fields in regular form views
     const readonlySelectors = [
-        '.field-amount .readonly', 
+        '.field-amount .readonly',
         '.field-balance .readonly',
         '.field-amount_display .readonly',
         '.field-paid_amount_display .readonly',
         '.field-balance_display .readonly'
     ];
-    
+
     document.querySelectorAll(readonlySelectors.join(',')).forEach(function (el) {
         let rawValue = el.innerText.replace(/[₹,]/g, '').trim();
         if (!rawValue || isNaN(parseFloat(rawValue))) return;
-        
+
         el.innerHTML = `
             <span style="color: #2e7d32; font-weight: bold;">${formatNumber(rawValue)}</span>
             <br>
             <small style="color: #666;">(${numberToWords(rawValue)} Rupees Only)</small>
         `;
+    });
+
+    // Format amount cells in TabularInline rows (existing/readonly rows only)
+    document.querySelectorAll('td.field-amount').forEach(function (td) {
+        // Skip cells that have an input — those are new (extra) rows
+        if (td.querySelector('input, select, textarea')) return;
+
+        const target = td.querySelector('p') || td;
+        const rawValue = target.innerText.replace(/[₹,\s]/g, '').trim();
+        if (!rawValue || isNaN(parseFloat(rawValue))) return;
+
+        target.innerHTML =
+            `<span style="color:#2e7d32;font-weight:bold;">${formatNumber(rawValue)}</span>`;
     });
 
 });

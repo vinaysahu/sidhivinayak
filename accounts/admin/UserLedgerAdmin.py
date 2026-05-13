@@ -40,7 +40,7 @@ class UserLedgerTransactionsInline(admin.TabularInline):
         'balance_display', 'balance_words'
     ]
 
-    fields = ['paid_on', 'payment_type', 'mode', 'amount', 'amount_display', 'amount_words', 'detail']
+    fields = ['paid_on', 'payment_type', 'mode', 'amount_display', 'amount', 'amount_words', 'detail']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -92,7 +92,7 @@ class UserLedgerTransactionsInline(admin.TabularInline):
         return request.user.is_superuser
 
     def has_change_permission(self, request, obj=None):
-        return request.user.is_superuser
+        return False
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
