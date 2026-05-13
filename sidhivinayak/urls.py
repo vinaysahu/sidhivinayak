@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+import sidhivinayak.admin_patches  # noqa: F401 — injects dashboard stats
+from sidhivinayak.admin_views import projects_overview, suppliers_overview, customer_balance_chart_data
 from django.conf import settings
 from django.conf.urls.static import static
 from projects.views import get_worker_wages
@@ -26,6 +28,9 @@ from customers.views import (
 )
 
 urlpatterns = [
+    path('admin/projects-overview/', projects_overview, name='admin_projects_overview'),
+    path('admin/suppliers-overview/', suppliers_overview, name='admin_suppliers_overview'),
+    path('admin/customer-balance-chart/', customer_balance_chart_data, name='admin_customer_balance_chart'),
     path('admin/', admin.site.urls),
     path('chat/', include('chat.urls', namespace='chat')),
     path('customer/', customer_login, name='customer'),

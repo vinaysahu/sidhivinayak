@@ -1,8 +1,14 @@
 from django import template
 from django.contrib.admin.views.main import PAGE_VAR
 from django.utils.safestring import mark_safe
+from common.utils.format_currency import format_indian_currency
 
 register = template.Library()
+
+
+@register.filter
+def indian_currency(value):
+    return format_indian_currency(value)
 
 
 @register.simple_tag

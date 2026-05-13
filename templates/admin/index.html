@@ -1,0 +1,429 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block content_title %}{% trans 'Dashboard' %}{% endblock %}
+
+{% block breadcrumbs %}
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+        <li class="breadcrumb-item">{% trans 'Dashboard' %}</li>
+    </ol>
+{% endblock %}
+
+{% block content %}
+
+    {# ── Stats Cards ───────────────────────────────────────────────────────── #}
+    {% if dashboard_stats %}
+    <div class="col-12 mb-3">
+        <div class="row">
+
+            <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ dashboard_stats.under_construction }}</h3>
+                        <p>Under Construction Projects</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-hard-hat"></i></div>
+                    <a href="{% url 'admin:projects_projects_changelist' %}?status={{ dashboard_stats.ACTIVE_STATUS|default:'10' }}" class="small-box-footer">
+                        View &nbsp;<i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ dashboard_stats.completed }}</h3>
+                        <p>Completed Projects</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                    <a href="{% url 'admin:projects_projects_changelist' %}?status=20" class="small-box-footer">
+                        View &nbsp;<i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3>{{ dashboard_stats.customers_with_balance }}</h3>
+                        <p>Customers with Pending Balance</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-users"></i></div>
+                    <a href="{% url 'admin:customers_customerledger_changelist' %}" class="small-box-footer">
+                        View &nbsp;<i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ dashboard_stats.suppliers_with_balance }}</h3>
+                        <p>Suppliers with Pending Balance</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-truck"></i></div>
+                    <a href="{% url 'admin:projects_projectsupplierledger_changelist' %}" class="small-box-footer">
+                        View &nbsp;<i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Customer Balance Chart ────────────────────────────────────────────── #}
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="gap:8px;">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Customer Pending Balance
+                </h3>
+                <div class="d-flex align-items-center" style="gap:8px;">
+                    <label class="mb-0 font-weight-bold" for="chartProjectFilter">Project:</label>
+                    <select id="chartProjectFilter" class="form-control form-control-sm" style="min-width:200px;">
+                        <option value="">— All Projects —</option>
+                        {% for proj in under_construction_projects %}
+                        <option value="{{ proj.id }}">{{ proj.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div style="position:relative; min-height:260px;">
+                    <canvas id="customerBalanceChart"></canvas>
+                    <div id="chartNoData" style="display:none; text-align:center; padding:40px; color:#888;">
+                        No customers with pending balance found.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+    (function () {
+        const CHART_URL = "{% url 'admin_customer_balance_chart' %}";
+        let chartInstance = null;
+
+        function fmt(val) {
+            if (val === null || val === undefined || isNaN(val)) return '₹ 0';
+            let n = parseFloat(val);
+            let parts = n.toFixed(2).split('.');
+            let int = parts[0], dec = parts[1];
+            let last3 = int.slice(-3), rest = int.slice(0, -3);
+            if (rest) {
+                rest = rest.split('').reverse().join('');
+                let grps = [];
+                for (let i = 0; i < rest.length; i += 2) grps.push(rest.substring(i, i+2));
+                rest = grps.join(',').split('').reverse().join('');
+                int = rest + ',' + last3;
+            } else { int = last3; }
+            return dec === '00' ? '₹ ' + int : '₹ ' + int + '.' + dec;
+        }
+
+        function loadChart(projectId) {
+            const url = CHART_URL + (projectId ? '?project_id=' + projectId : '');
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(data => {
+                    const canvas = document.getElementById('customerBalanceChart');
+                    const noData = document.getElementById('chartNoData');
+
+                    if (!data.labels || data.labels.length === 0) {
+                        canvas.style.display = 'none';
+                        noData.style.display = 'block';
+                        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+                        return;
+                    }
+
+                    canvas.style.display = 'block';
+                    noData.style.display = 'none';
+
+                    const chartData = {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'Total Amount',
+                                data: data.total_amounts,
+                                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1,
+                            },
+                            {
+                                label: 'Paid Amount',
+                                data: data.paid_amounts,
+                                backgroundColor: 'rgba(75, 192, 100, 0.7)',
+                                borderColor: 'rgba(75, 192, 100, 1)',
+                                borderWidth: 1,
+                            },
+                            {
+                                label: 'Balance',
+                                data: data.balances,
+                                backgroundColor: 'rgba(255, 99, 100, 0.7)',
+                                borderColor: 'rgba(255, 99, 100, 1)',
+                                borderWidth: 1,
+                            },
+                        ],
+                    };
+
+                    const options = {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ' ' + ctx.dataset.label + ': ' + fmt(ctx.raw);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    callback: function(val) { return fmt(val); }
+                                }
+                            }
+                        }
+                    };
+
+                    // Dynamic height: 60px per customer, minimum 260px
+                    const h = Math.max(260, data.labels.length * 60);
+                    canvas.style.height = h + 'px';
+                    canvas.parentElement.style.minHeight = h + 'px';
+
+                    if (chartInstance) {
+                        chartInstance.data = chartData;
+                        chartInstance.options = options;
+                        chartInstance.update();
+                    } else {
+                        chartInstance = new Chart(canvas, { type: 'bar', data: chartData, options: options });
+                    }
+                });
+        }
+
+        document.getElementById('chartProjectFilter').addEventListener('change', function () {
+            loadChart(this.value);
+        });
+
+        // Initial load
+        loadChart('');
+    })();
+    </script>
+
+    {# ── Latest Under-Construction Projects Table ─────────────────────────── #}
+    {% if latest_projects %}
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-hard-hat mr-2"></i>
+                    Latest Under Construction Projects
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Project</th>
+                                <th class="text-center">Total</th>
+                                <th class="text-center">Available</th>
+                                <th class="text-center">Agreement</th>
+                                <th class="text-center">Hold</th>
+                                <th class="text-center">Sold</th>
+                                <th class="text-right">Total Expenses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in latest_projects %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'admin:projects_projects_change' p.id %}">{{ p.name }}</a>
+                                </td>
+                                <td class="text-center"><strong>{{ p.total_houses }}</strong></td>
+                                <td class="text-center"><span class="badge badge-info">{{ p.available_houses }}</span></td>
+                                <td class="text-center"><span class="badge badge-warning">{{ p.agreement_houses }}</span></td>
+                                <td class="text-center"><span class="badge badge-secondary">{{ p.hold_houses }}</span></td>
+                                <td class="text-center"><span class="badge badge-success">{{ p.sold_houses }}</span></td>
+                                <td class="text-right"><strong>{{ p.total_expenses }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-right p-2">
+                <a href="{% url 'admin_projects_overview' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-list mr-1"></i> Show More
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Top Suppliers with Pending Balance ───────────────────────────────── #}
+    {% if top_supplier_ledgers %}
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-truck mr-2"></i>
+                    Suppliers with Pending Balance
+                    <small class="text-muted ml-2" style="font-size:12px;">(random sample, refreshes each visit)</small>
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Supplier</th>
+                                <th>Project</th>
+                                <th class="text-right">Total Amount</th>
+                                <th class="text-right">Paid Amount</th>
+                                <th class="text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in top_supplier_ledgers %}
+                            <tr>
+                                <td><strong>{{ entry.supplier_name }}</strong></td>
+                                <td>{{ entry.project_name }}</td>
+                                <td class="text-right">{{ entry.total_amount }}</td>
+                                <td class="text-right text-success">{{ entry.paid_amount }}</td>
+                                <td class="text-right"><strong class="text-danger">{{ entry.balance }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-right p-2">
+                <a href="{% url 'admin_suppliers_overview' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-list mr-1"></i> Show More
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Jazzmin App List ──────────────────────────────────────────────────── #}
+    {% get_side_menu using="app_list" as dashboard_list %}
+    {% if dashboard_list %}
+        {% widthratio dashboard_list|length 2 1 as middle %}
+    {% endif %}
+
+    <div class="col-lg-9 col-12">
+        <div class="row">
+            <div class="col-md-6 col-sm-12">
+                {% for app in dashboard_list %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="m-0">{{ app.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tbody>
+                                {% for model in app.models %}
+                                    <tr>
+                                        <td>
+                                            {% if model.url %}<a href="{{ model.url }}">{{ model.name }}</a>{% else %}{{ model.name }}{% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group float-right">
+                                                {% if model.add_url %}
+                                                    <a href="{{ model.add_url }}" class="btn btn-xs {{ jazzmin_ui.button_classes.success }} addlink">{% trans 'Add' %}</a>
+                                                {% endif %}
+                                                {% if model.url %}
+                                                    {% if model.view_only %}
+                                                        <a href="{{ model.url }}" class="btn btn-xs {{ jazzmin_ui.button_classes.info }} viewlink">{% trans 'View' %}</a>
+                                                    {% else %}
+                                                        <a href="{{ model.url }}" class="btn btn-xs {{ jazzmin_ui.button_classes.info }} changelink">{% if model.custom %}{% trans 'Go' %}{% else %}{% trans 'Change' %}{% endif %}</a>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if forloop.counter == middle|add:"0" %}
+                    </div>
+                    <div class="col-md-6 col-sm-12">
+                    {% endif %}
+
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Recent Actions ────────────────────────────────────────────────────── #}
+    <div class="col-lg-3 col-12">
+        <div id="content-related">
+            <div class="module" id="recent-actions-module">
+                <h4 class="mb-3">{% trans 'Recent actions' %}</h4>
+                {% load log %}
+                {% get_admin_log 6 as admin_log for_user user %}
+                {% if not admin_log %}
+                    <p>{% trans 'None available' %}</p>
+                {% else %}
+                    <div class="timeline">
+                        {% for entry in admin_log %}
+                            <div>
+                                {% if entry.is_change %}
+                                    <i class="fas fa-edit bg-gray text-xs"></i>
+                                {% elif entry.is_deletion %}
+                                    <i class="fas fa-trash bg-danger text-xs"></i>
+                                {% elif entry.is_addition %}
+                                    <i class="fas fa-plus-circle bg-success text-xs"></i>
+                                {% endif %}
+                                <div class="timeline-item">
+                                    <span class="time"><i class="fas fa-clock"></i> {% blocktrans with timesince=entry.action_time|timesince %}{{ timesince }} ago{% endblocktrans %}</span>
+                                    <h3 class="timeline-header no-border">
+                                        {% if entry.is_deletion or not entry.get_admin_url %}
+                                            {{ entry.object_repr }}
+                                        {% else %}
+                                            <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                                        {% endif %}
+                                        {% if entry.model %}
+                                            <span class="mini quiet">{% filter capfirst %}{{ entry.model }}{% endfilter %}</span>
+                                        {% endif %}
+                                    </h3>
+                                    {% if not entry.is_deletion %}
+                                        <div class="timeline-body">
+                                            {% if entry.is_addition %}
+                                                {{ entry }}
+                                            {% else %}
+                                                <ul style="list-style:none;padding:0;">
+                                                    {% load jazzmin %}
+                                                    {% action_message_to_list entry as action_message_list %}
+                                                    {% for action_message in action_message_list %}
+                                                        <li>{{ action_message.msg|style_bold_first_word }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <div><i class="fa fa-clock bg-gray"></i></div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

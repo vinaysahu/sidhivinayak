@@ -1,0 +1,79 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content_title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+    <li class="breadcrumb-item active">Projects Overview</li>
+</ol>
+{% endblock %}
+
+{% block content %}
+<div class="col-12">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-hard-hat mr-2"></i>
+                Under Construction Projects
+            </h3>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover mb-0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Project</th>
+                            <th class="text-center">Total Houses</th>
+                            <th class="text-center" style="color:#17a2b8;">Available</th>
+                            <th class="text-center" style="color:#ffc107;">Agreement</th>
+                            <th class="text-center" style="color:#fd7e14;">Hold</th>
+                            <th class="text-center" style="color:#28a745;">Sold</th>
+                            <th class="text-right">Total Expenses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in projects %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'admin:projects_projects_change' p.id %}" target="_blank">
+                                    {{ p.name }}
+                                </a>
+                            </td>
+                            <td class="text-center"><strong>{{ p.total_houses }}</strong></td>
+                            <td class="text-center">
+                                <span class="badge badge-info">{{ p.available_houses }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-warning">{{ p.agreement_houses }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-secondary">{{ p.hold_houses }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-success">{{ p.sold_houses }}</span>
+                            </td>
+                            <td class="text-right">
+                                <strong>{{ p.total_expenses }}</strong>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                No under construction projects found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer text-muted">
+            Total: <strong>{{ projects|length }}</strong> under construction project(s)
+        </div>
+    </div>
+</div>
+{% endblock %}
