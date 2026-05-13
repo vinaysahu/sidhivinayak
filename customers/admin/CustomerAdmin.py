@@ -6,8 +6,8 @@ import secrets
       
 class CustomerAdmin(admin.ModelAdmin):
 
-    list_display = [ "username", "show_full_name", "show_image", "email", "phone_no", "alt_phone_no", "address", "status", "created_at", "updated_at" ] # grid mae kaisa view
-    exclude = ('created_at', 'updated_at','auth_key', 'password_hash', 'password_reset_token')       # Remove from FORM
+    list_display = ["username", "show_full_name", "show_image", "email", "phone_no", "alt_phone_no", "address", "status", "last_login_on", "last_active_on", "created_at", "updated_at"]
+    exclude = ('created_at', 'updated_at', 'auth_key', 'password_hash', 'password_reset_token')
 
     def show_full_name(self, obj):
         if obj.first_name and obj.last_name:

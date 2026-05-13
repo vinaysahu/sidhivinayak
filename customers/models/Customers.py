@@ -39,8 +39,12 @@ class Customers(models.Model):
 
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=10)
 
+    last_login_on = models.DateTimeField(null=True, blank=True, verbose_name="Last Login")
+
+    last_active_on = models.DateTimeField(null=True, blank=True, verbose_name="Last Active")
+
     created_at = models.DateField(default=timezone.now)
-    
+
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     class Meta:

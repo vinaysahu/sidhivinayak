@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password
 from django.http import HttpResponse
+from django.utils import timezone
 from django.template.loader import render_to_string
 from .models.Customers import Customers
 from .models.CustomerLedger import CustomerLedger
@@ -44,7 +45,8 @@ def customer_login(request):
             if check_password(password, customer.password_hash):
                 request.session['customer_id'] = customer.id
                 request.session['customer_name'] = customer.username
-
+                customer.last_login_on = timezone.now()
+                customer.save(update_fields=['last_login_on'])
                 return redirect('dashboard')
             else:
                 messages.error(request, "Wrong password")
@@ -60,9 +62,10 @@ def customer_logout(request):
 def customer_dashboard(request):
     if not request.session.get('customer_id'):
         return redirect('login')
-    
+
     customer_id = request.session.get('customer_id')
     customer = Customers.objects.get(id=customer_id)
+    Customers.objects.filter(pk=customer.pk).update(last_active_on=timezone.now())
 
     customerLedger = CustomerLedger.objects.filter(customer_id=customer).first()
 

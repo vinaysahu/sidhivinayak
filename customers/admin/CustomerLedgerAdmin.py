@@ -116,9 +116,10 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
         'project_id',
         'project_house_id',
         'formatted_amount',
+        'formatted_loan_amount',
         'formatted_balance',
         'paid_amount',
-        'ledger_actions',        # ← naya column
+        'ledger_actions',
     ]
 
     exclude = ('created_at', 'updated_at')
@@ -132,6 +133,12 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
     def formatted_amount(self, obj):
         return format_indian_currency(obj.amount)
     formatted_amount.short_description = "Amount"
+
+    def formatted_loan_amount(self, obj):
+        if obj.loan_amount:
+            return format_indian_currency(obj.loan_amount)
+        return "—"
+    formatted_loan_amount.short_description = "Loan Amount"
 
     def formatted_balance(self, obj):
         return format_indian_currency(obj.balance)

@@ -10,6 +10,7 @@ class CustomerLedger(models.Model):
     project_id = models.ForeignKey('projects.Projects', on_delete=models.CASCADE, verbose_name="Project_customer_ledger")
     project_house_id = models.ForeignKey('projects.ProjectHouses', on_delete=models.CASCADE, verbose_name="Project_house_ledger")
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    loan_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Loan Amount")
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
