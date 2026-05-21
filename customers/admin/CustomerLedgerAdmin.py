@@ -32,14 +32,8 @@ class CustomerLedgerTransactionsInline(admin.TabularInline):
     exclude = ('created_at', 'updated_at')
     verbose_name = "Customer Ledger Transaction"
     verbose_name_plural = "Customer Ledger Transactions"
-    fields = ['edit_link', 'paid_on', 'payment_type', 'mode', 'formatted_amount', 'paid_to', 'detail']
-    readonly_fields = ['formatted_amount', 'edit_link']
-
-    def formatted_amount(self, obj):
-        if obj.pk and obj.amount is not None:
-            return format_indian_currency(obj.amount)
-        return "—"
-    formatted_amount.short_description = "Amount (₹)"
+    fields = ['edit_link', 'paid_on', 'payment_type', 'mode', 'amount', 'paid_to', 'detail']
+    readonly_fields = ['edit_link']
 
     def edit_link(self, obj):
         if obj.pk:
